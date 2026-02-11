@@ -1,0 +1,188 @@
+// (root)/src/lib/webrtc-manager.ts
+// import SimplePeer from 'simple-peer';
+var SimplePeer = window.SimplePeer;
+// only fix i found for global not defined and secure number generator thing (use a cdn)
+
+import { WebRTCSignalingClient, type Peer, type SignalingCallbacks } from './webrtc-signaling';
+
+interface WebRTCManagerCallbacks {
+  onRoomCreated?: (roomCode: string) => void;
+  onRoomJoined?: (roomCode: string) => void;
+  onRoomState?: (peers: Peer[]) => void;
+  onRoomClosed?: (reason: string) => void;
+  onError?: (error: string) => void;
+  onConnected?: (peerId: string, nickname: string) => void;
+  onDisconnected?: (peerId: string) => void;
+  onData?: (peerId: string, data: any) => void;
+}
+
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' }
+];
+
+export class WebRTCManager {
+  private signalingClient: WebRTCSignalingClient;
+  private peers: Map<string, SimplePeer.Instance> = new Map();
+  private peerInfo: Map<string, { nickname: string; isHost: boolean }> = new Map();
+  private callbacks: WebRTCManagerCallbacks;
+  private isHost = false;
+  private hostId: string | null = null;
+  private myNickname = '';
+
+  constructor(callbacks: WebRTCManagerCallbacks) {
+    this.callbacks = callbacks;
+
+    const signalingCallbacks: SignalingCallbacks = {
+      // different functions for created and joined for clarity that create tells that you are the host and joined tells 
+      // that you are not the host, better for clarity that you can provide different UI for host and non hosts
+      onRoomCreated: (roomCode) => {
+        console.log('Room created:', roomCode);
+        this.isHost = true;
+        this.hostId = this.signalingClient.getPeerId();
+        this.callbacks.onRoomCreated?.(roomCode);
+      },
+
+      onRoomJoined: (roomCode, hostId) => {
+        console.log('Room joined:', roomCode);
+        this.isHost = false;
+        this.hostId = hostId;
+        this.callbacks.onRoomJoined?.(roomCode);
+      },
+
+      onRoomState: (peers, hostId) => {
+        console.log('Room state updated:', peers.length, 'peers');
+        this.hostId = hostId;
+        this.callbacks.onRoomState?.(peers);
+
+        // Star Topology: Non-hosts initiate connection to the host
+        if (!this.isHost && hostId && !this.peers.has(hostId)) {
+          const hostPeer = peers.find(p => p.id === hostId);
+          if (hostPeer) {
+            console.log(`Initiating connection to host: ${hostPeer.nickname}`);
+            this.createPeerConnection(hostPeer.id, hostPeer.nickname, true);
+          }
+        }
+      },
+
+      onRoomClosed: (reason) => {
+        this.cleanup();
+        this.callbacks.onRoomClosed?.(reason);
+      },
+
+      onOffer: (fromPeerId, fromNickname, offer) => {
+        this.handleOffer(fromPeerId, fromNickname, offer);
+      },
+
+      onAnswer: (fromPeerId, _fromNickname, answer) => {
+        this.handleAnswer(fromPeerId, answer);
+      },
+
+      onError: (error) => {
+        this.callbacks.onError?.(error);
+      }
+    };
+
+    this.signalingClient = new WebRTCSignalingClient(signalingCallbacks);
+  }
+
+  /**
+   * In Supabase Realtime version, this handles both creating and joining.
+   */
+  async connect(roomCode: string, nickname: string, isHost: boolean = false): Promise<void> {
+    this.myNickname = nickname;
+    this.isHost = isHost;
+    await this.signalingClient.connect(roomCode, nickname);
+  }
+
+  // FIXED: These no longer call signalingClient directly. 
+  // They are now just wrappers for connect().
+  createRoom(roomCode: string, nickname: string) {
+    this.connect(roomCode, nickname, true);
+  }
+
+  joinRoom(roomCode: string, nickname: string) {
+    this.connect(roomCode, nickname, false);
+  }
+
+  private createPeerConnection(peerId: string, nickname: string, initiator: boolean) {
+    if (this.peers.has(peerId)) return;
+
+    const peer = new SimplePeer({
+      initiator,
+      trickle: false,
+      config: { iceServers: ICE_SERVERS }
+    });
+
+    this.peers.set(peerId, peer);
+    this.peerInfo.set(peerId, { nickname, isHost: peerId === this.hostId });
+
+    peer.on('signal', (data) => {
+      this.signalingClient.sendSignal(peerId, data, this.myNickname);
+    });
+
+    peer.on('connect', () => {
+      console.log(`✅ Connected to ${nickname}`);
+      this.callbacks.onConnected?.(peerId, nickname);
+    });
+
+    peer.on('data', (data) => {
+      try {
+        const parsed = JSON.parse(data.toString());
+        this.callbacks.onData?.(peerId, parsed);
+      } catch (error) {
+        console.error('Data error:', error);
+      }
+    });
+
+    peer.on('error', () => this.removePeer(peerId));
+    peer.on('close', () => {
+      this.removePeer(peerId);
+      this.callbacks.onDisconnected?.(peerId);
+    });
+  }
+
+  private handleOffer(fromPeerId: string, fromNickname: string, offer: any) {
+    if (!this.peers.has(fromPeerId)) {
+      this.createPeerConnection(fromPeerId, fromNickname, false);
+    }
+    this.peers.get(fromPeerId)?.signal(offer);
+  }
+
+  private handleAnswer(fromPeerId: string, answer: any) {
+    this.peers.get(fromPeerId)?.signal(answer);
+  }
+
+  sendData(data: any) {
+    const message = JSON.stringify(data);
+    this.peers.forEach((peer) => {
+      if (peer.connected) peer.send(message);
+    });
+  }
+
+  private removePeer(peerId: string) {
+    const peer = this.peers.get(peerId);
+    if (peer) {
+      peer.destroy();
+      this.peers.delete(peerId);
+      this.peerInfo.delete(peerId);
+    }
+  }
+
+  private cleanup() {
+    this.peers.forEach(peer => peer.destroy());
+    this.peers.clear();
+    this.peerInfo.clear();
+    this.isHost = false;
+    this.hostId = null;
+  }
+
+  disconnect() {
+    this.cleanup();
+    this.signalingClient.disconnect();
+  }
+
+  getPeerId(): string {
+    return this.signalingClient.getPeerId();
+  }
+}
