@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameState, Card, Suit, NetworkMessage, ChatMessage } from '@/types/game';
 import type { RoomState } from '@/types/game';
 import type { WebRTCManager } from '@/lib/webrtc-manager';
@@ -16,9 +16,17 @@ interface GameBoardProps {
 
 export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
   const [gameState, setGameState] = useState<GameState | null>(null);
+  
+  // 1. REF FIX: Keep a ref sync'd with state to access inside event listeners without stale closures
+  const gameStateRef = useRef<GameState | null>(null);
+  
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
   const isHost = roomState.hostId === myId;
 
-  // Initialize game (only host)
+  // 2. HOST LOGIC: Initialize game
   useEffect(() => {
     if (isHost && !gameState) {
       console.log('Host initializing game...');
@@ -26,7 +34,7 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
       const newRoundState = startNewRound(initialState);
       setGameState(newRoundState);
       
-      // Sync state to all players
+      // Broadcast initial state (Best effort, but peers might miss it)
       webrtc.sendData({
         type: 'game-state-sync',
         state: newRoundState
@@ -34,109 +42,116 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
     }
   }, [isHost, gameState, roomState.players, webrtc]);
 
-  // Listen for network messages
+  // 3. PEER LOGIC: Request state on mount
   useEffect(() => {
-    const originalCallback = webrtc['callbacks'].onData;
-    
-    webrtc['callbacks'].onData = (peerId: string, data: any) => {
-      originalCallback?.(peerId, data);
-      handleNetworkMessage(data);
-    };
+    if (!isHost && !gameState) {
+      console.log('Non-host requesting game state...');
+      // Ask the host for the state immediately upon loading this component
+      webrtc.sendData({
+        type: 'request-game-state'
+      } as any);
+    }
+  }, [isHost, gameState, webrtc]);
 
-    return () => {
-      webrtc['callbacks'].onData = originalCallback;
-    };
-  }, [webrtc, gameState]);
-
-  const handleNetworkMessage = (message: NetworkMessage) => {
+  // 4. MESSAGE HANDLER: Uses ref to avoid stale state
+  const handleNetworkMessage = useCallback((peerId: string, message: NetworkMessage | any) => {
     console.log('Game message received:', message);
-    
+    const currentState = gameStateRef.current; // ALWAYS use the Ref
+
     switch (message.type) {
+      case 'request-game-state':
+        // If I am host and I have the state, send it to the specific peer who asked
+        if (isHost && currentState) {
+            console.log(`Sending sync to requesting peer: ${peerId}`);
+            webrtc.sendData({
+                type: 'game-state-sync',
+                state: currentState
+            } as NetworkMessage, peerId, true);
+        }
+        break;
+
       case 'game-state-sync':
         if (message.state && !isHost) {
+          console.log('Received game state sync');
           setGameState(message.state as GameState);
         }
         break;
       
       case 'trump-selected':
-        if (gameState) {
-          const newState = selectTrump(gameState, message.suit);
+        if (currentState) {
+          const newState = selectTrump(currentState, message.suit);
           setGameState(newState);
         }
         break;
       
       case 'card-played':
-        if (gameState) {
-          const newState = playCard(gameState, message.playerId, message.card);
+        if (currentState) {
+          const newState = playCard(currentState, message.playerId, message.card);
           setGameState(newState);
         }
         break;
       
       case 'chat-message':
-        if (gameState) {
-          const newState = addChatMessage(gameState, message.message);
+        if (currentState) {
+          const newState = addChatMessage(currentState, message.message);
           setGameState(newState);
         }
         break;
     }
-  };
+    
+    // Relay message to other peers if I am the Host
+    // (excluding 'request-game-state' which is point-to-point usually, but relaying it doesn't hurt)
+    if (webrtc['isHost'] && message.type !== 'request-game-state') {
+      webrtc.sendData(message, peerId);
+    }
+  }, [isHost, webrtc]); // Removed 'gameState' from dependencies to prevent listener churn
+
+  // 5. LISTENER SETUP: Securely attach the listener
+  useEffect(() => {
+    console.log("Attaching GameBoard network listener");
+    const originalCallback = webrtc['callbacks'].onData;            
+    
+    webrtc['callbacks'].onData = (peerId: string, data: any) => {
+      // call original (Room.tsx) just in case, though likely not needed here
+      originalCallback?.(peerId, data); 
+      handleNetworkMessage(peerId, data);
+    };
+
+    return () => {
+      console.log("Detaching GameBoard network listener");
+      webrtc['callbacks'].onData = originalCallback;
+    };
+  }, [webrtc, handleNetworkMessage]);
 
   const handleTrumpSelect = (suit: Suit) => {
     if (!gameState) return;
-    
     const newState = selectTrump(gameState, suit);
     setGameState(newState);
-    
-    // Broadcast to all players
-    webrtc.sendData({
-      type: 'trump-selected',
-      suit
-    } as NetworkMessage);
+    webrtc.sendData({ type: 'trump-selected', suit } as NetworkMessage);
   };
 
   const handleCardPlay = (card: Card) => {
     if (!gameState) return;
-    
     const newState = playCard(gameState, myId, card);
     setGameState(newState);
-    
-    // Broadcast to all players
-    webrtc.sendData({
-      type: 'card-played',
-      card,
-      playerId: myId
-    } as NetworkMessage);
+    webrtc.sendData({ type: 'card-played', card, playerId: myId } as NetworkMessage);
   };
 
   const handleContinue = () => {
     if (!gameState) return;
-    
     if (gameState.phase === 'trick-complete') {
       const newState = continueAfterTrick(gameState);
       setGameState(newState);
-      
-      if (isHost) {
-        webrtc.sendData({
-          type: 'game-state-sync',
-          state: newState
-        } as NetworkMessage);
-      }
+      if (isHost) webrtc.sendData({ type: 'game-state-sync', state: newState } as NetworkMessage);
     } else if (gameState.phase === 'round-complete') {
       const newState = startNewRound(gameState);
       setGameState(newState);
-      
-      if (isHost) {
-        webrtc.sendData({
-          type: 'game-state-sync',
-          state: newState
-        } as NetworkMessage);
-      }
+      if (isHost) webrtc.sendData({ type: 'game-state-sync', state: newState } as NetworkMessage);
     }
   };
 
   const handleSendMessage = (text: string) => {
     if (!gameState) return;
-    
     const myPlayer = gameState.players.find(p => p.id === myId);
     if (!myPlayer) return;
     
@@ -150,17 +165,16 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
     
     const newState = addChatMessage(gameState, message);
     setGameState(newState);
-    
-    webrtc.sendData({
-      type: 'chat-message',
-      message
-    } as NetworkMessage);
+    webrtc.sendData({ type: 'chat-message', message } as NetworkMessage);
   };
 
   if (!gameState) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-900 to-emerald-800 flex items-center justify-center">
-        <div className="text-amber-400 text-2xl">Setting up game...</div>
+        <div className="text-amber-400 text-2xl flex flex-col items-center gap-4">
+            <div>Setting up game...</div>
+            {!isHost && <div className="text-sm text-amber-200">Waiting for host data...</div>}
+        </div>
       </div>
     );
   }
@@ -172,12 +186,9 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
     <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-green-900 to-teal-900 p-4">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Score Board */}
           <div className="lg:col-span-1">
             <ScoreBoard gameState={gameState} />
           </div>
-          
-          {/* Game Table */}
           <div className="lg:col-span-2">
             {gameState.phase === 'trump-selection' && isTrumpCaller && myPlayer && (
               <TrumpSelection
@@ -185,7 +196,9 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
                 onSelectTrump={handleTrumpSelect}
               />
             )}
-            
+            {gameState.phase === 'trump-selection' && !isTrumpCaller && myPlayer && (
+              <div>Trump card being selected... </div>
+            )}
             {gameState.phase !== 'trump-selection' && (
               <GameTable
                 gameState={gameState}
@@ -195,8 +208,6 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
               />
             )}
           </div>
-          
-          {/* Chat Panel */}
           <div className="lg:col-span-1">
             <ChatPanel
               messages={gameState.chatMessages}

@@ -9,6 +9,7 @@ export interface Peer {
   id: string;
   nickname: string;
   isHost: boolean;
+  isReady: boolean;
   joinedAt: number; // Added to determine who was first
 }
 
@@ -17,7 +18,7 @@ export interface SignalingCallbacks {
   onRoomCreated?: (roomCode: string) => void;
 
   /** Called when the local peer joins an existing room; hostId is the peerId of the host */
-  onRoomJoined?: (roomCode: string, hostId: string) => void;
+  onRoomJoined?: (roomCode: string, hostId: string, peers: Peer[]) => void;
 
   /** Called whenever the room state changes; peers is the list of participants, hostId is the peerId of the host */
   onRoomState?: (peers: Peer[], hostId?: string) => void;
@@ -76,6 +77,7 @@ export class WebRTCSignalingClient {
           id: p.id, 
           nickname: p.nickname, 
           isHost: p.isHost,
+          isReady: p.isReady,
           joinedAt: p.joinedAt
         }));
 
@@ -136,7 +138,7 @@ export class WebRTCSignalingClient {
         
         // If I'm not the host, I've successfully joined someone else's room
         if (host.id !== this.peerId) {
-            this.callbacks.onRoomJoined?.(roomCode, host.id);
+            this.callbacks.onRoomJoined?.(roomCode, host.id, peers);
         }
     }
 
@@ -149,6 +151,7 @@ export class WebRTCSignalingClient {
       id: this.peerId, 
       nickname, 
       isHost,
+      isReady: false,
       joinedAt: this.joinedAt
     });
   }
@@ -171,6 +174,18 @@ export class WebRTCSignalingClient {
     this.isHost = false;
     this.currentHostId = null;
   }
+
+  async setReady(nickname: string) {
+    await this.channel.track({
+      id: this.peerId, 
+      nickname: nickname, 
+      isHost: this.isHost,
+      isReady: true,
+      joinedAt: this.joinedAt
+    });
+  }
+
+  getPeers() { return this.channel.presenceState() }
 
   getIsHost() { return this.isHost; }
   getPeerId() { return this.peerId; }

@@ -1,5 +1,6 @@
 // (root)/src/lib/webrtc-manager.ts
 // import SimplePeer from 'simple-peer';
+// @ts-ignore
 var SimplePeer = window.SimplePeer;
 // only fix i found for global not defined and secure number generator thing (use a cdn)
 
@@ -7,7 +8,7 @@ import { WebRTCSignalingClient, type Peer, type SignalingCallbacks } from './web
 
 interface WebRTCManagerCallbacks {
   onRoomCreated?: (roomCode: string) => void;
-  onRoomJoined?: (roomCode: string) => void;
+  onRoomJoined?: (roomCode: string, peers: Peer[]) => void;
   onRoomState?: (peers: Peer[]) => void;
   onRoomClosed?: (reason: string) => void;
   onError?: (error: string) => void;
@@ -23,6 +24,7 @@ const ICE_SERVERS = [
 
 export class WebRTCManager {
   private signalingClient: WebRTCSignalingClient;
+  // @ts-ignore
   private peers: Map<string, SimplePeer.Instance> = new Map();
   private peerInfo: Map<string, { nickname: string; isHost: boolean }> = new Map();
   private callbacks: WebRTCManagerCallbacks;
@@ -43,11 +45,11 @@ export class WebRTCManager {
         this.callbacks.onRoomCreated?.(roomCode);
       },
 
-      onRoomJoined: (roomCode, hostId) => {
+      onRoomJoined: (roomCode, hostId, peers) => {
         console.log('Room joined:', roomCode);
         this.isHost = false;
         this.hostId = hostId;
-        this.callbacks.onRoomJoined?.(roomCode);
+        this.callbacks.onRoomJoined?.(roomCode, peers);
       },
 
       onRoomState: (peers, hostId) => {
@@ -105,6 +107,10 @@ export class WebRTCManager {
     this.connect(roomCode, nickname, false);
   }
 
+  handleReceiveData(peerId: string, message: any) { // to make data receiving function variable
+    this.callbacks.onData?.(peerId, message);
+  }
+
   private createPeerConnection(peerId: string, nickname: string, initiator: boolean) {
     if (this.peers.has(peerId)) return;
 
@@ -129,7 +135,8 @@ export class WebRTCManager {
     peer.on('data', (data) => {
       try {
         const parsed = JSON.parse(data.toString());
-        this.callbacks.onData?.(peerId, parsed);
+        console.log(`Low level received data from ${peerId}:\t`, parsed);
+        this.handleReceiveData(peerId, parsed);
       } catch (error) {
         console.error('Data error:', error);
       }
@@ -153,9 +160,28 @@ export class WebRTCManager {
     this.peers.get(fromPeerId)?.signal(answer);
   }
 
-  sendData(data: any) {
+  setReady() {
+    this.signalingClient.setReady(this.myNickname);
+  }
+                                                            // toggle for whether to include orexclude
+  sendData(data: any, excludePeerId: string | null = null, include: boolean = false) {
     const message = JSON.stringify(data);
-    this.peers.forEach((peer) => {
+    console.log("SENDING TO: ");
+    console.log(this.peers);
+    console.log("EXCLUDING: ");
+    console.log(excludePeerId);
+    if (this.isHost && include) {
+      let target = this.peers.get(excludePeerId);
+      if (!target) {
+        this.callbacks.onError("Target not found");
+        return;
+      }
+      if (target.connected) target.send(message); 
+      return;
+    }
+    this.peers.forEach((peer, peerId) => {
+      // skip excluded peer (which is expected to be the original sender)
+      if (this.isHost && data.type === 'chat-message' && peerId === excludePeerId) return;
       if (peer.connected) peer.send(message);
     });
   }

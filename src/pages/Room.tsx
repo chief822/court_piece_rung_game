@@ -4,6 +4,18 @@ import { WebRTCManager } from '@/lib/webrtc-manager';
 import type { RoomState } from '@/types/game';
 import WaitingRoom from '@/components/features/WaitingRoom';
 import GameBoard from '@/components/features/GameBoard';
+import { connected } from 'process';
+
+function mapPeersToPlayers(peers: any[]) {
+  return peers.map((peer) => {
+    return {
+      id: peer.id,
+      nickname: peer.nickname,
+      isReady: peer.isReady,
+      isHost: peer.isHost,
+    }
+  });
+}
 
 export default function Room() {
   const { roomCode } = useParams<{ roomCode: string }>();
@@ -13,6 +25,7 @@ export default function Room() {
   const [webrtc, setWebrtc] = useState<WebRTCManager | null>(null);
   const [myId, setMyId] = useState<string>('');
   const [roomState, setRoomState] = useState<RoomState | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [error, setError] = useState<string>('');
 
@@ -36,47 +49,45 @@ export default function Room() {
           hostId: id,
           gameStarted: false
         });
+        setIsConnected(true);
       },
       
-      onRoomJoined: (code) => {
+      onRoomJoined: (code, peers) => {
         console.log('Room joined:', code);
         const id = manager.getPeerId();
         setMyId(id);
+        const players = mapPeersToPlayers(peers);
+        const host = players.find(player => player.isHost);
+
+        setRoomState({
+          roomCode: code,
+          players,
+          hostId: host.id,
+          gameStarted: false
+        });
       },
       
       onRoomState: (peers) => {
         console.log('Room state updated:', peers);
+        setRoomState(prev => {
+          if (!prev) return prev;
+          
+          const players = mapPeersToPlayers(peers);
+          
+          return {
+            ...prev,
+            players
+          };
+        });
       },
       
       onConnected: (peerId, peerNickname) => {
         console.log('Connected to:', peerNickname);
-        setRoomState(prev => {
-          if (!prev) return prev;
-          
-          const playerExists = prev.players.some(p => p.id === peerId);
-          if (playerExists) return prev;
-          
-          return {
-            ...prev,
-            players: [...prev.players, { 
-              id: peerId, 
-              nickname: peerNickname, 
-              isReady: false, 
-              isHost: false 
-            }]
-          };
-        });
+        setIsConnected(true);
       },
       
       onDisconnected: (peerId) => {
         console.log('Disconnected:', peerId);
-        setRoomState(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            players: prev.players.filter(p => p.id !== peerId)
-          };
-        });
       },
       
       onData: (peerId, data) => {
@@ -108,19 +119,7 @@ export default function Room() {
   }, [roomCode, nickname, isHost, navigate]);
 
   const handleNetworkMessage = (message: any) => {
-    switch (message.type) {
-      case 'player-ready':
-        setRoomState(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            players: prev.players.map(p => 
-              p.id === message.playerId ? { ...p, isReady: true } : p
-            )
-          };
-        });
-        break;
-      
+    switch (message.type) {   // will make it cleaner later
       case 'start-game':
         setGameStarted(true);
         break;
@@ -128,17 +127,9 @@ export default function Room() {
   };
 
   const handleReady = () => {
-    if (!webrtc || !roomState) return;
+    if (!webrtc || !roomState || !isConnected) return;
     
-    const updatedState = {
-      ...roomState,
-      players: roomState.players.map(p => 
-        p.id === myId ? { ...p, isReady: true } : p
-      )
-    };
-    setRoomState(updatedState);
-    
-    webrtc.sendData({ type: 'player-ready', playerId: myId });
+    webrtc.setReady();
   };
 
   const handleStartGame = () => {
@@ -149,8 +140,6 @@ export default function Room() {
     setGameStarted(true);
     webrtc.sendData({ type: 'start-game' });
   };
-  console.log("BUG: ");
-  console.log(roomState, webrtc);
 
   if (error) {
     return (
@@ -163,7 +152,7 @@ export default function Room() {
     );
   }
 
-  if (!roomState || !webrtc) {
+  if (!isConnected || !webrtc) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-900 to-emerald-800 flex items-center justify-center">
         <div className="text-amber-400 text-2xl">Connecting...</div>

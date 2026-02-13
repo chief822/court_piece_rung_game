@@ -5,6 +5,7 @@ import PlayingCard from './PlayingCard';
 import { canPlayCard } from '@/lib/card-utils';
 import { getSuitSymbol } from '@/lib/card-utils';
 import { ArrowRight } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 
 interface GameTableProps {
   gameState: GameState;
@@ -14,6 +15,8 @@ interface GameTableProps {
 }
 
 export default function GameTable({ gameState, myId, onPlayCard, onContinue }: GameTableProps) {
+  const [isComplete, setisComplete] = useState<string>('');
+  const prevPhase = useRef<string | null>(null);
   const myPlayer = gameState.players.find(p => p.id === myId);
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const isMyTurn = currentPlayer?.id === myId && gameState.phase === 'playing';
@@ -33,6 +36,26 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
       onPlayCard(card);
     }
   };
+
+  useEffect(() => {
+    const prev = prevPhase.current;
+    const curr = gameState.phase;
+
+    prevPhase.current = curr;
+
+    const enteredComplete =
+      (curr === 'trick-complete' || curr === 'round-complete') &&
+      prev !== curr;
+
+    if (!enteredComplete) return;
+
+    setisComplete(gameState.phase);
+    onContinue();
+
+    const timeout = setTimeout(() => {
+      setisComplete('');
+    }, 5000);
+  }, [gameState.phase, onContinue]);
 
   return (
     <div className="space-y-4">
@@ -138,23 +161,17 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
       )}
 
       {/* Trick Complete / Round Complete */}
-      {(gameState.phase === 'trick-complete' || gameState.phase === 'round-complete') && (
+      {(isComplete !== '') && (
         <Card className="bg-gradient-to-r from-green-600 to-green-700 border-green-500 border-2">
           <CardContent className="p-6 text-center">
-            {gameState.phase === 'trick-complete' && (
+            {isComplete === 'trick-complete' && (
               <>
                 <div className="text-white text-xl font-bold mb-4">
                   Trick Won by {gameState.players.find(p => p.id === gameState.lastWinner)?.nickname}
                 </div>
-                <Button
-                  onClick={onContinue}
-                  className="bg-white text-green-700 hover:bg-green-50 font-bold"
-                >
-                  Continue <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
               </>
             )}
-            {gameState.phase === 'round-complete' && (
+            {isComplete === 'round-complete' && (
               <>
                 <div className="text-white text-2xl font-bold mb-2">Round Complete!</div>
                 <div className="text-green-100 mb-4">
@@ -162,12 +179,6 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                   {' | '}
                   Team 2: {gameState.players[1].tricksWon + gameState.players[3].tricksWon} tricks
                 </div>
-                <Button
-                  onClick={onContinue}
-                  className="bg-white text-green-700 hover:bg-green-50 font-bold text-lg"
-                >
-                  Next Round <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
               </>
             )}
           </CardContent>
