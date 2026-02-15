@@ -197,7 +197,20 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
               />
             )}
             {gameState.phase === 'trump-selection' && !isTrumpCaller && myPlayer && (
-              <div>Trump card being selected... </div>
+              <div className="flex items-center justify-center h-full">
+                <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl px-8 py-6 shadow-xl text-center">
+                  <div className="text-lg font-semibold text-emerald-300 mb-2">
+                    Trump Selection
+                  </div>
+
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="inline-block h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
+                    <p className="text-white/80">
+                      Waiting for trump to be called…
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
             {gameState.phase !== 'trump-selection' && (
               <GameTable
