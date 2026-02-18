@@ -6,6 +6,8 @@ var SimplePeer = window.SimplePeer;
 
 import { WebRTCSignalingClient, type Peer, type SignalingCallbacks } from './webrtc-signaling';
 
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
 interface WebRTCManagerCallbacks {
   onRoomCreated?: (roomCode: string) => void;
   onRoomJoined?: (roomCode: string, peers: Peer[]) => void;
@@ -17,12 +19,47 @@ interface WebRTCManagerCallbacks {
   onData?: (peerId: string, data: any) => void;
 }
 
-const ICE_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' }
-];
+// @ts-ignore
+async function logConnectionType(peer: SimplePeer.Instance) {
+  const pc = peer._pc; // Access the underlying RTCPeerConnection
+
+  if (!pc) return;
+
+  const stats = await pc.getStats();
+  let selectedCandidatePair = null;
+
+  stats.forEach(report => {
+    if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+      selectedCandidatePair = report;
+    }
+  });
+
+  if (selectedCandidatePair) {
+    const localCandidate = stats.get(selectedCandidatePair.localCandidateId);
+    const remoteCandidate = stats.get(selectedCandidatePair.remoteCandidateId);
+
+    if (localCandidate && remoteCandidate) {
+      console.log('Local candidate type:', localCandidate.candidateType);
+      console.log('Remote candidate type:', remoteCandidate.candidateType);
+
+      if (localCandidate.candidateType === 'relay' || remoteCandidate.candidateType === 'relay') {
+        console.log('Connection is using a TURN relay.');
+      } else {
+        console.log('Connection is direct P2P (e.g., host, srflx, prflx).');
+      }
+    }
+  }
+}
 
 export class WebRTCManager {
+  private stunServers: RTCIceServer[] = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ];
+
+  // ... inside loadTurnServers()
+  private ICE_SERVERS = [...this.stunServers];
+
   private signalingClient: WebRTCSignalingClient;
   // @ts-ignore
   private peers: Map<string, SimplePeer.Instance> = new Map();
@@ -94,6 +131,10 @@ export class WebRTCManager {
   async connect(roomCode: string, nickname: string, isHost: boolean = false): Promise<void> {
     this.myNickname = nickname;
     this.isHost = isHost;
+
+    // Load TURN before any peer is created
+    await this.loadTurnServers();
+
     await this.signalingClient.connect(roomCode, nickname);
   }
 
@@ -117,7 +158,8 @@ export class WebRTCManager {
     const peer = new SimplePeer({
       initiator,
       trickle: false,
-      config: { iceServers: ICE_SERVERS }
+      config: { iceServers: this.ICE_SERVERS },
+      // iceTransportPolicy: "relay" // 🔥 force TURN for debugging
     });
 
     this.peers.set(peerId, peer);
@@ -129,6 +171,7 @@ export class WebRTCManager {
 
     peer.on('connect', () => {
       console.log(`✅ Connected to ${nickname}`);
+      logConnectionType(peer);  // <--- this connect block?
       this.callbacks.onConnected?.(peerId, nickname);
     });
 
@@ -149,6 +192,32 @@ export class WebRTCManager {
     });
   }
 
+  private async loadTurnServers() {
+    try {
+      const res = await fetch(
+        "https://ycnamldhgyhkdbqlwedx.supabase.co/functions/v1/turn-credentials", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${ANON_KEY}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("TURN fetch failed");
+
+      const turnServers: RTCIceServer[] = await res.json();
+
+      // Metered already returns WebRTC-shaped iceServers
+      this.ICE_SERVERS = [
+        ...this.stunServers,
+        ...turnServers
+      ];
+
+      console.log("✅ TURN servers loaded");
+    } catch (err) {
+      console.warn("⚠️ TURN unavailable, using STUN only", err);
+    }
+  }
+
   private handleOffer(fromPeerId: string, fromNickname: string, offer: any) {
     if (!this.peers.has(fromPeerId)) {
       this.createPeerConnection(fromPeerId, fromNickname, false);
@@ -163,7 +232,7 @@ export class WebRTCManager {
   setReady() {
     this.signalingClient.setReady(this.myNickname);
   }
-                                                            // toggle for whether to include orexclude
+
   sendData(data: any, excludePeerId: string | null = null, include: boolean = false) {
     const message = JSON.stringify(data);
     console.log("SENDING TO: ");

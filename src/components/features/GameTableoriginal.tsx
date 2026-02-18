@@ -7,7 +7,6 @@ import { getSuitSymbol } from '@/lib/card-utils';
 import { ArrowRight } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import {useTimer} from 'react-timer-hook';
-import { motion } from 'framer-motion';
 
 interface GameTableProps {
   gameState: GameState;
@@ -145,38 +144,24 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
             {/* Center area - Current Trick */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="relative w-64 h-64">
-                {gameState.currentTrick.cards.map((playedCard) => {
-                  const playerIndex = gameState.players.findIndex(
-                    p => p.id === playedCard.playerId
-                  );
-
+                {gameState.currentTrick.cards.map((playedCard, index) => {
+                  const playerIndex = gameState.players.findIndex(p => p.id === playedCard.playerId);
                   const position = getPlayerPosition(playerIndex);
-
+                  
                   const positionStyles = {
                     bottom: 'bottom-0 left-1/2 -translate-x-1/2',
                     top: 'top-0 left-1/2 -translate-x-1/2',
                     left: 'left-0 top-1/2 -translate-y-1/2',
                     right: 'right-0 top-1/2 -translate-y-1/2'
                   };
-
+                  
                   return (
-                    <motion.div
+                    <div
                       key={playedCard.card.id}
-                      layoutId={`card-${playedCard.card.id}`}
-                      className={`absolute ${positionStyles[position]}`}
-                      initial={{ scale: 1.1 }}
-                      animate={{ scale: 1 }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 180,   // 👈 much slower
-                        damping: 30,
-                        mass: 1.2,
-                        delay: playedCard.playerId === myId ? 0 : 0.2
-                      }}
-                      style={{ zIndex: 100 }}
+                      className={`absolute ${positionStyles[position as keyof typeof positionStyles]}`}
                     >
                       <PlayingCard card={playedCard.card} size="md" />
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
@@ -225,35 +210,14 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
             <div className="flex justify-center gap-2 flex-wrap">
               {myPlayer.cards.map(card => {
                 const canPlay = isMyTurn && canPlayCard(card, myPlayer.cards, gameState.currentTrick.leadSuit);
-
                 return (
-                  <motion.div
+                  <div
                     key={card.id}
-                    layoutId={`card-${card.id}`}
                     onClick={() => handleCardClick(card)}
-                    className="relative select-none cursor-pointer rounded-xl" // Added rounded-xl so the glow wraps nicely
-                    
-                    // 1. Let Framer Motion handle the opacity based on playability
-                    animate={{ 
-                      opacity: canPlay ? 1 : 0.6 
-                    }}
-                    
-                    // 2. Let Framer Motion handle the hover glow effect dynamically
-                    whileHover={
-                      canPlay ? { 
-                        boxShadow: "0px 0px 20px 4px rgba(255, 215, 0, 0.6)",
-                        y: -5 // Lifts the card up slightly on hover
-                      } : {}
-                    }
-                    
-                    transition={{
-                      type: 'spring',
-                      stiffness: 200,
-                      damping: 30
-                    }}
+                    className={canPlay ? 'cursor-pointer hover:-translate-y-2 transition-transform' : 'opacity-60'}
                   >
                     <PlayingCard card={card} size="md" />
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
