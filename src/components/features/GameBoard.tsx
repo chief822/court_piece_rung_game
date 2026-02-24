@@ -4,6 +4,7 @@ import type { RoomState } from '@/types/game';
 import type { WebRTCManager } from '@/lib/webrtc-manager';
 import { createInitialGameState, startNewRound, selectTrump, playCard, continueAfterTrick, addChatMessage } from '@/lib/game-logic';
 import GameTable from './GameTable';
+import GameAlerts from './GameAlerts';
 import TrumpSelection from './TrumpSelection';
 import ScoreBoard from './ScoreBoard';
 import ChatPanel from './ChatPanel';
@@ -19,6 +20,21 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
   
   // 1. REF FIX: Keep a ref sync'd with state to access inside event listeners without stale closures
   const gameStateRef = useRef<GameState | null>(null);
+
+  const [isComplete, setIsComplete] = useState<string>('');
+  const [expiryTime, setExpiryTime] = useState<Date>(new Date());
+
+  // Sync completion state when gameState phase changes
+  useEffect(() => {
+    if (['trick-complete-with-winner', 'trick-complete-without-winner', 'round-complete'].includes(gameState?.phase || '')) {
+      const newExpiry = new Date();
+      newExpiry.setSeconds(newExpiry.getSeconds() + 5);
+      setExpiryTime(newExpiry);
+      setIsComplete(gameState!.phase);
+    } else {
+      setIsComplete('');
+    }
+  }, [gameState?.phase]);
   
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -35,10 +51,10 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
       setGameState(newRoundState);
       
       // Broadcast initial state (Best effort, but peers might miss it)
-      webrtc.sendData({
-        type: 'game-state-sync',
-        state: newRoundState
-      } as NetworkMessage);
+      // webrtc.sendData({
+      //   type: 'game-state-sync',
+      //   state: newRoundState
+      // } as NetworkMessage);
     }
   }, [isHost, gameState, roomState.players, webrtc]);
 
@@ -139,7 +155,7 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
 
   const handleContinue = () => {
     if (!gameState) return;
-    if (gameState.phase === 'trick-complete') {
+    if (gameState.phase === 'trick-complete-with-winner' || gameState.phase === 'trick-complete-without-winner') {
       const newState = continueAfterTrick(gameState);
       setGameState(newState);
       if (isHost) webrtc.sendData({ type: 'game-state-sync', state: newState } as NetworkMessage);
@@ -188,6 +204,15 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="lg:col-span-1">
             <ScoreBoard gameState={gameState} />
+            
+            {isComplete && (
+              <GameAlerts 
+                gameState={gameState} 
+                expiryTime={expiryTime} 
+                isComplete={isComplete}
+                onTimerExpire={handleContinue} 
+              />
+            )}
           </div>
           <div className="lg:col-span-2">
             {gameState.phase === 'trump-selection' && isTrumpCaller && myPlayer && (

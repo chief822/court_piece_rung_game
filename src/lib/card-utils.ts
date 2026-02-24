@@ -69,17 +69,24 @@ export function sortHand(cards: Card[]): Card[] {
 export function canPlayCard(
   card: Card,
   hand: Card[],
-  leadSuit: Suit | null
+  leadSuit: Suit | null,
+  trumpSuit: Suit,
 ): boolean {
   if (!leadSuit) return true; // First card of trick
   
   // Must follow suit if possible
-  const hasSuit = hand.some(c => c.suit === leadSuit);
-  if (hasSuit) {
+  const hasLeadSuit = hand.some(c => c.suit === leadSuit);
+  if (hasLeadSuit) {
     return card.suit === leadSuit;
   }
+
+  // doesn't have any card of lead suit type check if he has trump
+  const hasTrumpSuit = hand.some(c => c.suit === trumpSuit);
+  if (hasTrumpSuit) {
+    return card.suit === trumpSuit;
+  }
   
-  // Can play any card if no cards of lead suit
+  // Can play any card if no cards of lead suit or trump suit
   return true;
 }
 

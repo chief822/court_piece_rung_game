@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { WebRTCManager } from '@/lib/webrtc-manager';
-import type { RoomState } from '@/types/game';
+import type { NetworkMessage, RoomState } from '@/types/game';
 import WaitingRoom from '@/components/features/WaitingRoom';
 import GameBoard from '@/components/features/GameBoard';
 import { connected } from 'process';
@@ -118,7 +118,7 @@ export default function Room() {
     };
   }, [roomCode, nickname, isHost, navigate]);
 
-  const handleNetworkMessage = (message: any) => {
+  const handleNetworkMessage = (message: NetworkMessage) => {
     switch (message.type) {   // will make it cleaner later
       case 'start-game':
         setGameStarted(true);

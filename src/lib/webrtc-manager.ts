@@ -171,7 +171,7 @@ export class WebRTCManager {
 
     peer.on('connect', () => {
       console.log(`✅ Connected to ${nickname}`);
-      logConnectionType(peer);  // <--- this connect block?
+      logConnectionType(peer);
       this.callbacks.onConnected?.(peerId, nickname);
     });
 

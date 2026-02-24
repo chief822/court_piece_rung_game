@@ -18,7 +18,8 @@ export function createInitialGameState(players: Array<{ id: string; nickname: st
     trumpSuit: null,
     trumpCallerId: null,
     currentTrick: { cards: [], winner: null, leadSuit: null },
-    completedTricks: [],
+    accumalatedTricksAfterLastWinner: [],
+    completedTricks: 0,
     currentPlayerIndex: 0,
     dealerIndex: 0,
     team1Score: 0,
@@ -30,7 +31,7 @@ export function createInitialGameState(players: Array<{ id: string; nickname: st
     consecutiveDealsWinner: null,
     consecutiveDealsCount: 0,
     roundNumber: 1,
-    lastWinner: null,
+    prevTrickWinner: null,
     chatMessages: []
   };
 }
@@ -48,15 +49,18 @@ export function startNewRound(state: GameState): GameState {
     tricksWon: 0
   }));
 
+  const currentTrick = { cards: [], winner: null, leadSuit: null };
   return {
     ...state,
     phase: 'trump-selection',
     players: newPlayers,
     trumpSuit: null,
     trumpCallerId: newPlayers[trumpCallerIndex].id,
-    currentTrick: { cards: [], winner: null, leadSuit: null },
-    completedTricks: [],
-    currentPlayerIndex: trumpCallerIndex
+    currentTrick,
+    completedTricks: 0,
+    currentPlayerIndex: trumpCallerIndex,
+    prevTrickWinner: null,
+    accumalatedTricksAfterLastWinner: [currentTrick]
   };
 }
 
@@ -97,64 +101,95 @@ export function playCard(state: GameState, playerId: string, card: Card): GameSt
     winner: null,
     leadSuit: state.currentTrick.leadSuit || card.suit
   };
+
+  const newAccumalatedTricksAfterLastWinner = [...state.accumalatedTricksAfterLastWinner.slice(0, -1), newTrick];
   
   // Check if trick is complete (4 cards played)
   if (newTrick.cards.length === 4) {
+    const completedTricks = state.completedTricks + 1;
     const winnerId = determineWinner(newTrick.cards, newTrick.leadSuit!, state.trumpSuit);
     const winnerIndex = state.players.findIndex(p => p.id === winnerId);
-    
-    // Update tricks won
-    const playersWithTricks = newPlayers.map((p, idx) => {
-      if (idx === winnerIndex) {
-        return { ...p, tricksWon: p.tricksWon + 1 };
-      }
-      return p;
-    });
-    
+
     newTrick.winner = winnerId;
     
-    // Check if round is complete (all 13 tricks played)
-    const completedTricks = [...state.completedTricks, newTrick];
-    if (completedTricks.length === 13) {
-      return completeRound({
+    if (completedTricks > 2 && (newTrick.winner === state.prevTrickWinner || completedTricks === 13)) {
+      // Update tricks won
+      const playersWithTricks = newPlayers.map((p, idx) => {
+        if (idx === winnerIndex) {
+          return { ...p, tricksWon: p.tricksWon +  newAccumalatedTricksAfterLastWinner.length };
+        }
+        return p;
+      });
+
+      return {
         ...state,
         players: playersWithTricks,
-        currentTrick: { cards: [], winner: null, leadSuit: null },
+        currentTrick: newTrick,
         completedTricks,
-        lastWinner: winnerId,
-        phase: 'round-complete'
-      });
+        currentPlayerIndex: winnerIndex,
+        prevTrickWinner: winnerId,
+        phase: 'trick-complete-with-winner',
+        accumalatedTricksAfterLastWinner: newAccumalatedTricksAfterLastWinner
+      }
     }
     
     return {
       ...state,
-      players: playersWithTricks,
+      players: newPlayers,
       currentTrick: newTrick,
       completedTricks,
       currentPlayerIndex: winnerIndex,
-      lastWinner: winnerId,
-      phase: 'trick-complete'
+      prevTrickWinner: winnerId,
+      phase: 'trick-complete-without-winner',
+      accumalatedTricksAfterLastWinner: newAccumalatedTricksAfterLastWinner
     };
   }
   
   // Move to next player (counter-clockwise)
-  const nextPlayerIndex = (state.currentPlayerIndex + 1) % 4;
+  const nextPlayerIndex = (state.currentPlayerIndex - 1 + 4) % 4;
   
   return {
     ...state,
     players: newPlayers,
     currentTrick: newTrick,
-    currentPlayerIndex: nextPlayerIndex
+    currentPlayerIndex: nextPlayerIndex,
+    accumalatedTricksAfterLastWinner: newAccumalatedTricksAfterLastWinner
   };
 }
 
 export function continueAfterTrick(state: GameState): GameState {
-  if (state.phase !== 'trick-complete') return state;
+  if (!(state.phase === 'trick-complete-with-winner' || state.phase === 'trick-complete-without-winner')) {
+    return state;
+  }
+  const currentTrick = { cards: [], winner: null, leadSuit: null };
+
+  // check if any team has score greater than or equal to 7
+  if (state.phase === 'trick-complete-with-winner') {
+    const team1Tricks = state.players[0].tricksWon + state.players[2].tricksWon;
+    const team2Tricks = state.players[1].tricksWon + state.players[3].tricksWon;
+    if (team1Tricks >= 7 || team2Tricks >= 7) {
+      return {
+        ...state,
+        phase: 'round-complete',
+        team1Score: team1Tricks,
+        team2Score: team2Tricks,
+      }
+    }
+    return {
+      ...state,
+      phase: 'playing',
+      currentTrick,
+      accumalatedTricksAfterLastWinner: [currentTrick]
+    };
+  }
   
+  // completedTricks === 13 check not needed as the above box will handle that
+
   return {
     ...state,
     phase: 'playing',
-    currentTrick: { cards: [], winner: null, leadSuit: null }
+    currentTrick,
+    accumalatedTricksAfterLastWinner: [...state.accumalatedTricksAfterLastWinner, currentTrick]
   };
 }
 
@@ -194,6 +229,7 @@ function completeRound(state: GameState): GameState {
     }
     
     // Check for goon court (first 7 consecutive tricks)
+    // TODO: fix later grand court winner check
     const first7Tricks = state.completedTricks.slice(0, 7);
     const first7Winners = first7Tricks.map(t => {
       const winnerIndex = state.players.findIndex(p => p.id === t.winner);

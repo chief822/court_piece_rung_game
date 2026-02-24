@@ -9,6 +9,37 @@ export interface Card {
   id: string; // unique identifier
 }
 
+export const SUIT_ORDER: Suit[] = [
+  'spades',
+  'hearts',
+  'diamonds',
+  'clubs',
+];
+
+export const RANK_ORDER: Rank[] = [
+  'A',
+  'K',
+  'Q',
+  'J',
+  '10',
+  '9',
+  '8',
+  '7',
+  '6',
+  '5',
+  '4',
+  '3',
+  '2',
+];
+
+export const RANK_INDEX = Object.fromEntries(
+  RANK_ORDER.map((r, i) => [r, i])
+) as Record<Rank, number>;
+
+export const SUIT_INDEX = Object.fromEntries(
+  SUIT_ORDER.map((s, i) => [s, i])
+) as Record<Suit, number>;
+
 export type PlayerPosition = 0 | 1 | 2 | 3; // 0=bottom, 1=left, 2=top, 3=right
 
 export interface Player {
@@ -25,7 +56,7 @@ export interface Trick {
   leadSuit: Suit | null;
 }
 
-export type GamePhase = 'waiting' | 'trump-selection' | 'playing' | 'trick-complete' | 'round-complete' | 'game-over';
+export type GamePhase = 'waiting' | 'trump-selection' | 'playing' | 'trick-complete-without-winner' | 'trick-complete-with-winner' | 'round-complete' | 'game-over';
 
 export interface GameState {
   phase: GamePhase;
@@ -33,7 +64,8 @@ export interface GameState {
   trumpSuit: Suit | null;
   trumpCallerId: string | null;
   currentTrick: Trick;
-  completedTricks: Trick[];
+  accumalatedTricksAfterLastWinner: Trick[];
+  completedTricks: number;
   currentPlayerIndex: number;
   dealerIndex: number;
   
@@ -47,9 +79,10 @@ export interface GameState {
   consecutiveDealsWinner: 1 | 2 | null;
   consecutiveDealsCount: number;
   
+  prevTrickWinner: string | null;
+  
   // Round info
   roundNumber: number;
-  lastWinner: string | null;
   
   // Chat
   chatMessages: ChatMessage[];

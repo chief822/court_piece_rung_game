@@ -31,7 +31,7 @@ export default function RoomJoin() {
       <div className="w-full max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-amber-400 mb-2 drop-shadow-lg">Court Piece</h1>
+          <h1 className="text-5xl font-bold text-amber-400 mb-2 drop-shadow-lg">Court Piece Double Sir</h1>
           <p className="text-xl text-amber-100 font-medium">Rung - The Classic Card Game</p>
           <div className="flex items-center justify-center gap-2 mt-4 text-amber-200">
             <Users className="w-5 h-5" />
@@ -110,7 +110,7 @@ export default function RoomJoin() {
           </Card>
         </div>
 
-        {/* Rules Preview */}
+        {/* Rules Preview
         <Card className="mt-6 bg-slate-800/50 border-amber-700">
           <CardHeader>
             <CardTitle className="text-amber-400 text-xl">Quick Rules</CardTitle>
@@ -123,7 +123,7 @@ export default function RoomJoin() {
             <p>• First 7 consecutive tricks = 1 Court (Goon Court)</p>
             <p>• Win all 13 tricks = 52 Courts (Bavney)</p>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </div>
   );
