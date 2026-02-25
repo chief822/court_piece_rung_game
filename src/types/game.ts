@@ -47,6 +47,7 @@ export interface Player {
   nickname: string;
   position: PlayerPosition;
   cards: Card[];
+  cardsWon: Card[];
   tricksWon: number;
 }
 

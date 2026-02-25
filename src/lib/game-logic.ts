@@ -9,6 +9,7 @@ export function createInitialGameState(players: Array<{ id: string; nickname: st
     nickname: p.nickname,
     position: positions[index],
     cards: [],
+    cardsWon: [],
     tricksWon: 0
   }));
 
@@ -112,11 +113,21 @@ export function playCard(state: GameState, playerId: string, card: Card): GameSt
 
     newTrick.winner = winnerId;
     
+    // check if someone won
     if (completedTricks > 2 && (newTrick.winner === state.prevTrickWinner || completedTricks === 13)) {
       // Update tricks won
-      const playersWithTricks = newPlayers.map((p, idx) => {
+      const playersWithTricks: Player[] = newPlayers.map((p, idx) => {
         if (idx === winnerIndex) {
-          return { ...p, tricksWon: p.tricksWon +  newAccumalatedTricksAfterLastWinner.length };
+          return {
+            ...p,
+            tricksWon: p.tricksWon + newAccumalatedTricksAfterLastWinner.length,
+            cardsWon: [
+              ...p.cardsWon,
+              ...newAccumalatedTricksAfterLastWinner.flatMap(trick =>
+                trick.cards.map(obj => obj.card)
+              )
+            ]
+          };
         }
         return p;
       });

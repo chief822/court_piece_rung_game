@@ -234,6 +234,7 @@ export class WebRTCManager {
   }
 
   sendData(data: any, excludePeerId: string | null = null, include: boolean = false) {
+    // include true means only send to the excludepeerid while false means send to all with exception for chat-message
     const message = JSON.stringify(data);
     console.log("SENDING TO: ");
     console.log(this.peers);

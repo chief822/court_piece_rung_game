@@ -60,14 +60,31 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
 
   // 3. PEER LOGIC: Request state on mount
   useEffect(() => {
-    if (!isHost && !gameState) {
-      console.log('Non-host requesting game state...');
-      // Ask the host for the state immediately upon loading this component
-      webrtc.sendData({
-        type: 'request-game-state'
-      } as any);
-    }
-  }, [isHost, gameState, webrtc]);
+    if (isHost) return; // host doesn't request
+
+    let intervalMs = 200; // start with 200ms
+    const maxInterval = 2000; // max wait 2s
+    let timeoutId: NodeJS.Timeout;
+
+    const requestGameState = () => {
+      if (!gameStateRef.current) {
+        console.log('Requesting game state from host...');
+        webrtc.sendData({ type: 'request-game-state' } as any);
+
+        // increase interval for next request (backoff)
+        intervalMs = Math.min(intervalMs * 1.5, maxInterval);
+
+        // schedule next request
+        timeoutId = setTimeout(requestGameState, intervalMs);
+      }
+    };
+
+    // start first request immediately
+    requestGameState();
+
+    // cleanup on unmount
+    return () => clearTimeout(timeoutId);
+  }, [isHost, webrtc]);
 
   // 4. MESSAGE HANDLER: Uses ref to avoid stale state
   const handleNetworkMessage = useCallback((peerId: string, message: NetworkMessage | any) => {

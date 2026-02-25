@@ -30,22 +30,34 @@ function hashStringToNumber(str: string) {
   return Math.abs(hash);
 }
 
+function deterministicRandom3(
+  seed: number
+): [number, number, number] {
+  const a = 1664525;
+  const c = 1013904223;
+  const m = 2 ** 32;
+
+  let x = seed >>> 0;
+
+  function next01(): number {
+    x = (a * x + c) % m;
+    return x / m; // [0, 1)
+  }
+
+  const r1 = next01() * 50;    // [0, 50)
+  const r2 = next01() * 50;    // [0, 50)
+  const angle = next01() * 360; // [0, 360)
+
+  return [-25 + r1, 25 + r2, angle];
+}
+
 function getCardPileTransform(card: { suit: Suit; rank: Rank }) {
   const seed = hashStringToNumber(`${card.rank}-${card.suit}`);
 
-  return seed / (seed * seed + 2 * seed);
-
-  // return {
-  //   rotation: (seed % 90) - 45,      // more chaotic
-  //   jitterX: (seed % 61) - 30,       // -30px to +30px
-  //   jitterY: ((seed >> 4) % 61) - 30
-  // };
+  return deterministicRandom3(seed);
 }
 
 export default function GameTable({ gameState, myId, onPlayCard, onContinue }: GameTableProps) {
-  // const [isComplete, setisComplete] = useState<GamePhase | ''>('');
-  // const prevPhase = useRef<GamePhase | null>(null);
-  // const [expiryTime, setExpiryTime] = useState<Date>(new Date());
   const myPlayer = gameState.players.find(p => p.id === myId);
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
   const isMyTurn = currentPlayer?.id === myId && gameState.phase === 'playing';
@@ -66,54 +78,6 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
     }
   };
 
-  // useEffect(() => {
-  //   const prev = prevPhase.current;
-  //   const curr = gameState.phase;
-
-  //   prevPhase.current = curr;
-
-  //   const enteredComplete =
-  //     (curr === 'trick-complete-with-winner' || curr === 'trick-complete-without-winner' || curr === 'round-complete') &&
-  //     prev !== curr;
-
-  //   if (!enteredComplete) return;
-
-  //   const newExpiry = new Date();
-  //   newExpiry.setSeconds(newExpiry.getSeconds() + 5);
-  //   setExpiryTime(newExpiry);
-  //   setisComplete(curr);
-    
-  //   // Scroll to top smoothly
-  //   window.scrollTo({ top: 0, behavior: 'smooth' });
-  // }, [gameState.phase]);
-
-  // function Timer({ expiryTimestamp, handleExpire }: TimerProps): JSX.Element {
-  //   const { totalSeconds } = useTimer({
-  //     expiryTimestamp,
-  //     onExpire: () => handleExpire(),
-  //     interval: 1000
-  //   });
-
-  //   const timerGradient =
-  //     isComplete === 'trick-complete-with-winner' || isComplete === 'trick-complete-without-winner'
-  //       ? 'from-green-400 to-green-600'
-  //       : 'from-purple-400 to-purple-600';
-
-  //   return (
-  //     <div
-  //       className={`inline-block text-white font-bold text-2xl px-6 py-2 rounded-full shadow-lg animate-pulse
-  //       bg-gradient-to-r ${timerGradient} transition-transform transform hover:scale-105`}
-  //     >
-  //       {totalSeconds}s
-  //     </div>
-  //   );
-  // }
-
-  // function nextRound() {
-  //   setisComplete('');
-  //   onContinue();
-  // }
-
   return (
     <div className="space-y-4">
       {/* Trump Suit Indicator */}
@@ -128,43 +92,6 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
           </CardContent>
         </Card>
       )}
-
-      {/* Trick Complete / Round Complete
-      {isComplete !== '' && (
-        <Card
-          className={`bg-gradient-to-r ${
-            isComplete === 'trick-complete-with-winner' || isComplete === 'trick-complete-without-winner' ? 'from-green-600 to-green-700 border-green-500' : 'from-purple-600 to-purple-700 border-purple-500'
-          } border-2 transform transition-transform duration-500 ease-out ${
-            isComplete ? 'translate-y-0 opacity-100' : '-translate-y-20 opacity-0'
-          }`}
-        >
-          <CardContent className="p-6 text-center">
-            {isComplete === 'trick-complete-without-winner' && (
-              <div className="text-white text-xl font-bold mb-4">
-                Trick Senior: {gameState.players.find(p => p.id === gameState.prevTrickWinner)?.nickname}
-              </div>
-            )}
-
-            {isComplete === 'trick-complete-with-winner' && (
-              <div className="text-white text-xl font-bold mb-4">
-                Tricks Won by {gameState.players.find(p => p.id === gameState.prevTrickWinner)?.nickname}
-              </div>
-            )}
-
-            {isComplete === 'round-complete' && (
-              <>
-                <div className="text-white text-2xl font-bold mb-2">Round Complete!</div>
-                <div className="text-green-100 mb-4">
-                  Team 1: {gameState.players[0].tricksWon + gameState.players[2].tricksWon} tricks
-                  {' | '}
-                  Team 2: {gameState.players[1].tricksWon + gameState.players[3].tricksWon} tricks
-                </div>
-              </>
-            )}
-            <Timer expiryTimestamp={expiryTime} handleExpire={nextRound} />
-          </CardContent>
-        </Card>
-      )} */}
 
       {/* Game Table */}
       <Card className="bg-gradient-to-br from-green-800 to-green-900 border-amber-700 border-4 relative">
@@ -182,22 +109,41 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                     );
 
                     const position = getPlayerPosition(playerIndex);
-                    const jitter = getCardPileTransform(playedCard.card);
+                    const [offsetX, offsetY, rotation] = getCardPileTransform(playedCard.card);
+                    
+                    // according to test translate-x or -y doesnt work. framer motion is probably overriding it
+                    // but top, botttom, left, right are working so use them, havent checked if rotate
 
                     const positionStyles = {
-                      bottom: `bottom-0 left-1/2 -translate-x-1/2`,
-                      top: `top-0 left-1/2 -translate-x-1/2`,
-                      left: `left-0 top-1/2 -translate-y-1/2`,
-                      right: `right-0 top-1/2 -translate-y-1/2`
+                      bottom: {
+                        bottom: `${offsetX}%`,
+                        left: `${offsetY}%`
+                      },
+                      top: {
+                        top: `${offsetX}%`,
+                        left: `${offsetY}%`
+                      },
+                      left: {
+                        left: `${offsetX}%`,
+                        top: `${offsetY}%`
+                      },
+                      right: {
+                        right: `${offsetX}%`,
+                        top: `${offsetY}%`
+                      }
                     };
 
                     return (
                       <motion.div
                         key={playedCard.card.id}
                         layoutId={`card-${playedCard.card.id}`}
-                        className={`absolute ${positionStyles[position]}`}
+                        style={{ 
+                          zIndex: 100,
+                          position: 'absolute',
+                          ...positionStyles[position]
+                        }}
                         initial={{ scale: 1.1 }}
-                        animate={{ scale: 1 }}
+                        animate={{ scale: 1, rotate: rotation }}
                         transition={{
                           type: 'spring',
                           stiffness: 180,   // 👈 much slower
@@ -205,7 +151,6 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                           mass: 1.2,
                           delay: playedCard.playerId === myId ? 0 : 0.2
                         }}
-                        style={{ zIndex: 100 }}
                       >
                         <PlayingCard card={playedCard.card} size="md" />
                       </motion.div>
@@ -236,6 +181,24 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                   }`}>
                     <div className="text-white font-bold">{player.nickname}</div>
                     <div className="text-amber-400 text-sm">Tricks: {player.tricksWon}</div>
+                    {player.cardsWon.map((wonCard) => {
+                      return (
+                          <motion.div
+                            key={wonCard.id}
+                            layoutId={`card-${wonCard.id}`}
+                            initial={{ scale: 1.1 }}
+                            animate={{ scale: 1, opacity: 0 }}
+                            transition={{
+                              type: 'tween',
+                              duration: 1.5,
+                              ease: 'easeInOut'   // makes it smooth
+                            }}
+                            style={{ position: 'absolute' }}
+                          >
+                            <PlayingCard card={wonCard} size="md" />
+                          </motion.div>
+                        );
+                      })}
                   </div>
                 </div>
               );
