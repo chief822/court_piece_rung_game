@@ -1,6 +1,25 @@
 import type { GameState, Player, Card, Suit, PlayerPosition, Trick, ChatMessage } from '@/types/game';
 import { createDeck, shuffleDeck, dealCards, determineWinner } from './card-utils';
 
+/**
+ * Returns a random integer between min and max (both inclusive).
+ */
+function getRandomInt(min: number, max: number): number {
+  // Ensure the inputs are treated as integers
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  
+  // The +1 makes the maximum value possible
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
+ * Randomly returns either valueA or valueB.
+ */
+function pickOne(valueA: number, valueB: number): number {
+  return Math.random() < 0.5 ? valueA : valueB;
+}
+
 export function createInitialGameState(players: Array<{ id: string; nickname: string }>): GameState {
   const positions: PlayerPosition[] = [0, 1, 2, 3];
   
@@ -22,7 +41,7 @@ export function createInitialGameState(players: Array<{ id: string; nickname: st
     accumalatedTricksAfterLastWinner: [],
     completedTricks: 0,
     currentPlayerIndex: 0,
-    dealerIndex: 0,
+    dealerIndex: getRandomInt(0, 3),
     team1Score: 0,
     team2Score: 0,
     team1DealsWon: 0,
@@ -216,6 +235,7 @@ function completeRound(state: GameState): GameState {
   let newState = { ...state };
   let team1DealsWon = state.team1DealsWon;
   let team2DealsWon = state.team2DealsWon;
+  let dealerIndex: number = -1;
 
   const dealWinner = getWinnerTeam(state);
   if (dealWinner === null) {
@@ -225,15 +245,18 @@ function completeRound(state: GameState): GameState {
   }
   if (dealWinner === 1) {
     team1DealsWon++;
+    dealerIndex = pickOne(1, 3);
   }
   else {
     team2DealsWon++;
+    dealerIndex = pickOne(0, 2);
   }
 
   newState = {
     ...newState,
     team1DealsWon,
     team2DealsWon,
+    dealerIndex,
     roundNumber: state.roundNumber + 1
   };
 
