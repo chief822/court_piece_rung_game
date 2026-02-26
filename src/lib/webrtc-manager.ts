@@ -178,7 +178,7 @@ export class WebRTCManager {
     peer.on('data', (data) => {
       try {
         const parsed = JSON.parse(data.toString());
-        console.log(`Low level received data from ${peerId}:\t`, parsed);
+        // it will be print later so to stop duplicate print
         this.handleReceiveData(peerId, parsed);
       } catch (error) {
         console.error('Data error:', error);

@@ -80,11 +80,13 @@ export function canPlayCard(
     return card.suit === leadSuit;
   }
 
-  // doesn't have any card of lead suit type check if he has trump
-  const hasTrumpSuit = hand.some(c => c.suit === trumpSuit);
-  if (hasTrumpSuit) {
-    return card.suit === trumpSuit;
-  }
+  // trump suit not mandatory
+
+  // // doesn't have any card of lead suit type check if he has trump
+  // const hasTrumpSuit = hand.some(c => c.suit === trumpSuit);
+  // if (hasTrumpSuit) {
+  //   return card.suit === trumpSuit;
+  // }
   
   // Can play any card if no cards of lead suit or trump suit
   return true;

@@ -4,7 +4,7 @@ import Room from './pages/Room';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/court_piece_rung_game">
       <Routes>
         <Route path="/" element={<RoomJoin />} />
         <Route path="/room/:roomCode" element={<Room />} />

@@ -18,8 +18,9 @@ interface GameBoardProps {
 export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   
-  // 1. REF FIX: Keep a ref sync'd with state to access inside event listeners without stale closures
+  // 1. REF FIX: Keep a ref sync'd with state to access inpm run denside event listeners without stale closures
   const gameStateRef = useRef<GameState | null>(null);
+  const [needsResync, setNeedsResync] = useState(false);
 
   const [isComplete, setIsComplete] = useState<string>('');
   const [expiryTime, setExpiryTime] = useState<Date>(new Date());
@@ -27,6 +28,7 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
   // Sync completion state when gameState phase changes
   useEffect(() => {
     if (['trick-complete-with-winner', 'trick-complete-without-winner', 'round-complete'].includes(gameState?.phase || '')) {
+      console.log("Phase changed to: ", gameState?.phase);
       const newExpiry = new Date();
       newExpiry.setSeconds(newExpiry.getSeconds() + 5);
       setExpiryTime(newExpiry);
@@ -59,32 +61,36 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
   }, [isHost, gameState, roomState.players, webrtc]);
 
   // 3. PEER LOGIC: Request state on mount
-  useEffect(() => {
-    if (isHost) return; // host doesn't request
+  const requestGameStateOnce = useCallback(() => {
+    if (isHost) return;
 
-    let intervalMs = 200; // start with 200ms
-    const maxInterval = 2000; // max wait 2s
+    console.log('Requesting game state from host...');
+    webrtc.sendData({ type: 'request-game-state' } as any);
+  }, [isHost, webrtc]);
+
+  useEffect(() => {
+    if (isHost) return;
+    if (!needsResync && gameStateRef.current) return;
+
+    let intervalMs = 200;
+    const maxInterval = 2000;
     let timeoutId: NodeJS.Timeout;
 
-    const requestGameState = () => {
+    const requestLoop = () => {
       if (!gameStateRef.current) {
-        console.log('Requesting game state from host...');
-        webrtc.sendData({ type: 'request-game-state' } as any);
+        requestGameStateOnce();
 
-        // increase interval for next request (backoff)
         intervalMs = Math.min(intervalMs * 1.5, maxInterval);
-
-        // schedule next request
-        timeoutId = setTimeout(requestGameState, intervalMs);
+        timeoutId = setTimeout(requestLoop, intervalMs);
+      } else {
+        setNeedsResync(false); // stop loop once valid state arrives
       }
     };
 
-    // start first request immediately
-    requestGameState();
+    requestLoop();
 
-    // cleanup on unmount
     return () => clearTimeout(timeoutId);
-  }, [isHost, webrtc]);
+  }, [isHost, needsResync, requestGameStateOnce]);
 
   // 4. MESSAGE HANDLER: Uses ref to avoid stale state
   const handleNetworkMessage = useCallback((peerId: string, message: NetworkMessage | any) => {
@@ -104,8 +110,17 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
         break;
 
       case 'game-state-sync':
-        if (message.state && !isHost) {
-          console.log('Received game state sync');
+        if (!isHost && message.state) {
+          console.log('Received game state sync', message.state);
+
+          // Detect stale or terminal state
+          if (message.state.phase === 'round-complete') {
+            console.warn('Received stale round-complete state, re-requesting...');
+            gameStateRef.current = null;
+            setNeedsResync(true);
+            return;
+          }
+
           setGameState(message.state as GameState);
         }
         break;
@@ -177,9 +192,16 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
       setGameState(newState);
       if (isHost) webrtc.sendData({ type: 'game-state-sync', state: newState } as NetworkMessage);
     } else if (gameState.phase === 'round-complete') {
+      console.log("Round Complete, starting new round");
+      if (!isHost) {
+        gameStateRef.current = null;
+        setNeedsResync(true);
+        return;
+      }
       const newState = startNewRound(gameState);
       setGameState(newState);
-      if (isHost) webrtc.sendData({ type: 'game-state-sync', state: newState } as NetworkMessage);
+      console.log("Updated game state for new round", newState);
+      // if (isHost) webrtc.sendData({ type: 'game-state-sync', state: newState } as NetworkMessage);
     }
   };
 

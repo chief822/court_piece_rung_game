@@ -5,6 +5,7 @@ import fs from "fs";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: "/court_piece_rung_game/",
   define: {
     // By default, Vite doesn't include shims for NodeJS/
     // necessary for segment analytics lib to work
@@ -13,10 +14,6 @@ export default defineConfig({
   server: {
     host: "::",
     port: 8080,
-    https: {
-      key: fs.readFileSync("localhost+2-key.pem"),
-      cert: fs.readFileSync("localhost+2.pem")
-    },
   },
   plugins: [
     react(),

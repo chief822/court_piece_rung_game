@@ -1,4 +1,4 @@
-// components/GameAlerts.tsx
+import { useEffect } from 'react';
 import { GameState } from '@/types/game';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTimer } from 'react-timer-hook';
@@ -10,11 +10,26 @@ interface GameAlertsProps {
   onTimerExpire: () => void;
 }
 
-export default function GameAlerts({ gameState, expiryTime, isComplete, onTimerExpire }: GameAlertsProps) {
-  const { totalSeconds } = useTimer({
+export default function GameAlerts({
+  gameState,
+  expiryTime,
+  isComplete,
+  onTimerExpire
+}: GameAlertsProps) {
+
+  const {
+    totalSeconds,
+    restart
+  } = useTimer({
     expiryTimestamp: expiryTime,
     onExpire: onTimerExpire,
+    autoStart: true,
   });
+
+  // 🔥 THIS IS THE FIX
+  useEffect(() => {
+    restart(expiryTime, true);
+  }, [expiryTime, restart]);
 
   const isRound = isComplete === 'round-complete';
   const bgColor = isRound ? 'from-purple-600 to-purple-700' : 'from-green-600 to-green-700';
@@ -27,7 +42,7 @@ export default function GameAlerts({ gameState, expiryTime, isComplete, onTimerE
         {isComplete === 'trick-complete-without-winner' && (
           <div className="font-bold">Senior: {winner?.nickname}</div>
         )}
-        
+
         {isComplete === 'trick-complete-with-winner' && (
           <div className="font-bold">Winner: {winner?.nickname}</div>
         )}

@@ -75,6 +75,19 @@ export function selectTrump(state: GameState, suit: Suit): GameState {
   };
 }
 
+// returns team number if anyone won yet otherwise null
+function getWinnerTeam(state: GameState): number | null {
+  const team1Tricks = state.players[0].tricksWon + state.players[2].tricksWon;
+  const team2Tricks = state.players[1].tricksWon + state.players[3].tricksWon;
+  if (team1Tricks >= 7) {
+    return 1;
+  }
+  else if (team2Tricks >= 7) {
+    return 2;
+  }
+  return null;
+}
+
 export function playCard(state: GameState, playerId: string, card: Card): GameState {
   if (state.phase !== 'playing') return state;
   
@@ -174,16 +187,12 @@ export function continueAfterTrick(state: GameState): GameState {
   }
   const currentTrick = { cards: [], winner: null, leadSuit: null };
 
-  // check if any team has score greater than or equal to 7
   if (state.phase === 'trick-complete-with-winner') {
-    const team1Tricks = state.players[0].tricksWon + state.players[2].tricksWon;
-    const team2Tricks = state.players[1].tricksWon + state.players[3].tricksWon;
-    if (team1Tricks >= 7 || team2Tricks >= 7) {
+    if (getWinnerTeam(state) != null) {
+      const newState = completeRound(state);
       return {
-        ...state,
+        ...newState,
         phase: 'round-complete',
-        team1Score: team1Tricks,
-        team2Score: team2Tricks,
       }
     }
     return {
@@ -194,7 +203,6 @@ export function continueAfterTrick(state: GameState): GameState {
     };
   }
   
-  // completedTricks === 13 check not needed as the above box will handle that
 
   return {
     ...state,
@@ -205,97 +213,112 @@ export function continueAfterTrick(state: GameState): GameState {
 }
 
 function completeRound(state: GameState): GameState {
-  // Calculate team tricks
-  const team1Tricks = state.players[0].tricksWon + state.players[2].tricksWon;
-  const team2Tricks = state.players[1].tricksWon + state.players[3].tricksWon;
-  
-  const trumpCallerIndex = state.players.findIndex(p => p.id === state.trumpCallerId);
-  const trumpCallerTeam = trumpCallerIndex % 2 === 0 ? 1 : 2;
-  
   let newState = { ...state };
   let team1DealsWon = state.team1DealsWon;
   let team2DealsWon = state.team2DealsWon;
-  let team1Courts = state.team1Courts;
-  let team2Courts = state.team2Courts;
-  let consecutiveWinner = state.consecutiveDealsWinner;
-  let consecutiveCount = state.consecutiveDealsCount;
-  
-  // Check for 52-court (bavney)
-  if (team1Tricks === 13) {
-    team1Courts += 52;
-    consecutiveWinner = null;
-    consecutiveCount = 0;
-  } else if (team2Tricks === 13) {
-    team2Courts += 52;
-    consecutiveWinner = null;
-    consecutiveCount = 0;
-  } else {
-    // Determine deal winner
-    const dealWinner = team1Tricks >= 7 ? 1 : 2;
-    
-    if (dealWinner === 1) {
-      team1DealsWon++;
-    } else {
-      team2DealsWon++;
-    }
-    
-    // Check for goon court (first 7 consecutive tricks)
-    // TODO: fix later grand court winner check
-    const first7Tricks = state.completedTricks.slice(0, 7);
-    const first7Winners = first7Tricks.map(t => {
-      const winnerIndex = state.players.findIndex(p => p.id === t.winner);
-      return winnerIndex % 2 === 0 ? 1 : 2;
-    });
-    
-    if (first7Winners.every(w => w === 1)) {
-      team1Courts++;
-    } else if (first7Winners.every(w => w === 2)) {
-      team2Courts++;
-    }
-    
-    // Check for 7 consecutive deals (regular court)
-    if (consecutiveWinner === dealWinner) {
-      consecutiveCount++;
-      if (consecutiveCount === 7) {
-        if (dealWinner === 1) {
-          team1Courts++;
-        } else {
-          team2Courts++;
-        }
-        consecutiveWinner = null;
-        consecutiveCount = 0;
-      }
-    } else {
-      consecutiveWinner = dealWinner;
-      consecutiveCount = 1;
-    }
+
+  const dealWinner = getWinnerTeam(state);
+  if (dealWinner === null) {
+    // invalid function call
+    console.log("Invalid valid call round not complete");
+    return state;
   }
-  
-  // Determine next dealer
-  let nextDealer = state.dealerIndex;
-  if (trumpCallerTeam === 1 && team1Tricks >= 7) {
-    // Same dealer if trump caller's team wins without a court
-    nextDealer = state.dealerIndex;
-  } else if (trumpCallerTeam === 2 && team2Tricks >= 7) {
-    nextDealer = state.dealerIndex;
-  } else {
-    // Rotate dealer counter-clockwise
-    nextDealer = (state.dealerIndex - 1 + 4) % 4;
+  if (dealWinner === 1) {
+    team1DealsWon++;
   }
-  
+  else {
+    team2DealsWon++;
+  }
+
   newState = {
     ...newState,
     team1DealsWon,
     team2DealsWon,
-    team1Courts,
-    team2Courts,
-    consecutiveDealsWinner: consecutiveWinner,
-    consecutiveDealsCount: consecutiveCount,
-    dealerIndex: nextDealer,
     roundNumber: state.roundNumber + 1
   };
+
+  return newState
+  // let team1Courts = state.team1Courts;
+  // let team2Courts = state.team2Courts;
+  // let consecutiveWinner = state.consecutiveDealsWinner;
+  // let consecutiveCount = state.consecutiveDealsCount;
   
-  return newState;
+  // // Check for 52-court (bavney)
+  // if (team1Tricks === 13) {
+  //   team1Courts += 52;
+  //   consecutiveWinner = null;
+  //   consecutiveCount = 0;
+  // } else if (team2Tricks === 13) {
+  //   team2Courts += 52;
+  //   consecutiveWinner = null;
+  //   consecutiveCount = 0;
+  // } else {
+  //   // Determine deal winner
+  //   const dealWinner = team1Tricks >= 7 ? 1 : 2;
+    
+  //   if (dealWinner === 1) {
+  //     team1DealsWon++;
+  //   } else {
+  //     team2DealsWon++;
+  //   }
+    
+  //   // Check for goon court (first 7 consecutive tricks)
+  //   // TODO: fix later grand court winner check
+  //   const first7Tricks = state.completedTricks.slice(0, 7);
+  //   const first7Winners = first7Tricks.map(t => {
+  //     const winnerIndex = state.players.findIndex(p => p.id === t.winner);
+  //     return winnerIndex % 2 === 0 ? 1 : 2;
+  //   });
+    
+  //   if (first7Winners.every(w => w === 1)) {
+  //     team1Courts++;
+  //   } else if (first7Winners.every(w => w === 2)) {
+  //     team2Courts++;
+  //   }
+    
+  //   // Check for 7 consecutive deals (regular court)
+  //   if (consecutiveWinner === dealWinner) {
+  //     consecutiveCount++;
+  //     if (consecutiveCount === 7) {
+  //       if (dealWinner === 1) {
+  //         team1Courts++;
+  //       } else {
+  //         team2Courts++;
+  //       }
+  //       consecutiveWinner = null;
+  //       consecutiveCount = 0;
+  //     }
+  //   } else {
+  //     consecutiveWinner = dealWinner;
+  //     consecutiveCount = 1;
+  //   }
+  // }
+  
+  // // Determine next dealer
+  // let nextDealer = state.dealerIndex;
+  // if (trumpCallerTeam === 1 && team1Tricks >= 7) {
+  //   // Same dealer if trump caller's team wins without a court
+  //   nextDealer = state.dealerIndex;
+  // } else if (trumpCallerTeam === 2 && team2Tricks >= 7) {
+  //   nextDealer = state.dealerIndex;
+  // } else {
+  //   // Rotate dealer counter-clockwise
+  //   nextDealer = (state.dealerIndex - 1 + 4) % 4;
+  // }
+  
+  // newState = {
+  //   ...newState,
+  //   team1DealsWon,
+  //   team2DealsWon,
+  //   team1Courts,
+  //   team2Courts,
+  //   consecutiveDealsWinner: consecutiveWinner,
+  //   consecutiveDealsCount: consecutiveCount,
+  //   dealerIndex: nextDealer,
+  //   roundNumber: state.roundNumber + 1
+  // };
+  
+  // return newState;
 }
 
 export function addChatMessage(state: GameState, message: ChatMessage): GameState {
