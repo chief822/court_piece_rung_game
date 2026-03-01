@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Card as UICard, CardContent } from '@/components/ui/card';
 import type { GameState, Card, Suit, NetworkMessage, ChatMessage } from '@/types/game';
 import type { RoomState } from '@/types/game';
 import type { WebRTCManager } from '@/lib/webrtc-manager';
 import { createInitialGameState, startNewRound, selectTrump, playCard, continueAfterTrick, addChatMessage } from '@/lib/game-logic';
+import { getSuitSymbol } from '@/lib/card-utils';
 import GameTable from './GameTable';
 import GameAlerts from './GameAlerts';
 import TrumpSelection from './TrumpSelection';
@@ -238,21 +240,42 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
   const isTrumpCaller = gameState.trumpCallerId === myId;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-green-900 to-teal-900 p-4">
+    <div className="bg-gradient-to-br from-emerald-900 via-green-900 to-teal-900 pt-2">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+
           <div className="lg:col-span-1">
-            <ScoreBoard gameState={gameState} />
-            
-            {isComplete && (
-              <GameAlerts 
-                gameState={gameState} 
-                expiryTime={expiryTime} 
-                isComplete={isComplete}
-                onTimerExpire={handleContinue} 
-              />
-            )}
+            <div className="flex flex-col min-h-screen gap-4 pb-6">
+              {/* Trump Suit Indicator */}
+              <UICard className="bg-gradient-to-r from-purple-600 to-purple-700 border-purple-500 border-2">
+                <CardContent className="p-4">
+                  <div className="text-center text-white">
+                    {gameState.trumpSuit && (<>
+                      <span className="text-lg font-medium mr-2">Trump Suit:</span>
+                        <span className="text-3xl">{getSuitSymbol(gameState.trumpSuit)}</span>
+                        <span className="text-lg font-bold ml-2 capitalize">{gameState.trumpSuit}</span>
+                      </>
+                    )}
+                    {!gameState.trumpSuit && (
+                      <p className="text-white/80">Waiting for trump to be called…</p>
+                    )}
+                  </div>
+                </CardContent>
+              </UICard>
+
+              {isComplete && (
+                <GameAlerts 
+                  gameState={gameState} 
+                  expiryTime={expiryTime} 
+                  isComplete={isComplete}
+                  onTimerExpire={handleContinue} 
+                />
+              )}
+              
+              <ScoreBoard gameState={gameState} />
+            </div>
           </div>
+
           <div className="lg:col-span-2">
             {gameState.phase === 'trump-selection' && isTrumpCaller && myPlayer && (
               <TrumpSelection
@@ -285,6 +308,7 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
               />
             )}
           </div>
+
           <div className="lg:col-span-1">
             <ChatPanel
               messages={gameState.chatMessages}
@@ -292,6 +316,7 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
               onSendMessage={handleSendMessage}
             />
           </div>
+          
         </div>
       </div>
     </div>

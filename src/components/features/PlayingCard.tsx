@@ -8,9 +8,9 @@ interface PlayingCardProps {
 
 export default function PlayingCard({ card, size = 'md' }: PlayingCardProps) {
   const sizeClasses = {
-    sm: 'w-16 h-24 text-lg',
-    md: 'w-20 h-28 text-xl',
-    lg: 'w-24 h-36 text-2xl'
+    sm: 'w-16 h-24 text-lg -mr-8',
+    md: 'w-20 h-28 text-xl -mr-12',
+    lg: 'w-24 h-36 text-2xl -mr-16'
   };
 
   return (

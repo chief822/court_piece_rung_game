@@ -1,0 +1,29 @@
+// vite.config.ts
+import { defineConfig } from "file:///home/muhammad-ali/Desktop/court_piece_rung_game/node_modules/vite/dist/node/index.js";
+import react from "file:///home/muhammad-ali/Desktop/court_piece_rung_game/node_modules/@vitejs/plugin-react-swc/index.js";
+import path from "path";
+var __vite_injected_original_dirname = "/home/muhammad-ali/Desktop/court_piece_rung_game";
+var vite_config_default = defineConfig({
+  base: "/court_piece_rung_game/",
+  define: {
+    // By default, Vite doesn't include shims for NodeJS/
+    // necessary for segment analytics lib to work
+    // global: {},
+  },
+  server: {
+    host: "::",
+    port: 8080
+  },
+  plugins: [
+    react()
+  ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__vite_injected_original_dirname, "./src")
+    }
+  }
+});
+export {
+  vite_config_default as default
+};
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAic291cmNlcyI6IFsidml0ZS5jb25maWcudHMiXSwKICAic291cmNlc0NvbnRlbnQiOiBbImNvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9kaXJuYW1lID0gXCIvaG9tZS9tdWhhbW1hZC1hbGkvRGVza3RvcC9jb3VydF9waWVjZV9ydW5nX2dhbWVcIjtjb25zdCBfX3ZpdGVfaW5qZWN0ZWRfb3JpZ2luYWxfZmlsZW5hbWUgPSBcIi9ob21lL211aGFtbWFkLWFsaS9EZXNrdG9wL2NvdXJ0X3BpZWNlX3J1bmdfZ2FtZS92aXRlLmNvbmZpZy50c1wiO2NvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9pbXBvcnRfbWV0YV91cmwgPSBcImZpbGU6Ly8vaG9tZS9tdWhhbW1hZC1hbGkvRGVza3RvcC9jb3VydF9waWVjZV9ydW5nX2dhbWUvdml0ZS5jb25maWcudHNcIjtpbXBvcnQgeyBkZWZpbmVDb25maWcgfSBmcm9tIFwidml0ZVwiO1xuaW1wb3J0IHJlYWN0IGZyb20gXCJAdml0ZWpzL3BsdWdpbi1yZWFjdC1zd2NcIjtcbmltcG9ydCBwYXRoIGZyb20gXCJwYXRoXCI7XG5pbXBvcnQgZnMgZnJvbSBcImZzXCI7XG5cbi8vIGh0dHBzOi8vdml0ZWpzLmRldi9jb25maWcvXG5leHBvcnQgZGVmYXVsdCBkZWZpbmVDb25maWcoe1xuICBiYXNlOiBcIi9jb3VydF9waWVjZV9ydW5nX2dhbWUvXCIsXG4gIGRlZmluZToge1xuICAgIC8vIEJ5IGRlZmF1bHQsIFZpdGUgZG9lc24ndCBpbmNsdWRlIHNoaW1zIGZvciBOb2RlSlMvXG4gICAgLy8gbmVjZXNzYXJ5IGZvciBzZWdtZW50IGFuYWx5dGljcyBsaWIgdG8gd29ya1xuICAgIC8vIGdsb2JhbDoge30sXG4gIH0sXG4gIHNlcnZlcjoge1xuICAgIGhvc3Q6IFwiOjpcIixcbiAgICBwb3J0OiA4MDgwLFxuICB9LFxuICBwbHVnaW5zOiBbXG4gICAgcmVhY3QoKSxcbiAgXSxcbiAgcmVzb2x2ZToge1xuICAgIGFsaWFzOiB7XG4gICAgICBcIkBcIjogcGF0aC5yZXNvbHZlKF9fZGlybmFtZSwgXCIuL3NyY1wiKSxcbiAgICB9LFxuICB9LFxufSk7XG4iXSwKICAibWFwcGluZ3MiOiAiO0FBQWtVLFNBQVMsb0JBQW9CO0FBQy9WLE9BQU8sV0FBVztBQUNsQixPQUFPLFVBQVU7QUFGakIsSUFBTSxtQ0FBbUM7QUFNekMsSUFBTyxzQkFBUSxhQUFhO0FBQUEsRUFDMUIsTUFBTTtBQUFBLEVBQ04sUUFBUTtBQUFBO0FBQUE7QUFBQTtBQUFBLEVBSVI7QUFBQSxFQUNBLFFBQVE7QUFBQSxJQUNOLE1BQU07QUFBQSxJQUNOLE1BQU07QUFBQSxFQUNSO0FBQUEsRUFDQSxTQUFTO0FBQUEsSUFDUCxNQUFNO0FBQUEsRUFDUjtBQUFBLEVBQ0EsU0FBUztBQUFBLElBQ1AsT0FBTztBQUFBLE1BQ0wsS0FBSyxLQUFLLFFBQVEsa0NBQVcsT0FBTztBQUFBLElBQ3RDO0FBQUEsRUFDRjtBQUNGLENBQUM7IiwKICAibmFtZXMiOiBbXQp9Cg==

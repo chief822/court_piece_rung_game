@@ -24,25 +24,29 @@ export default function ScoreBoard({ gameState }: ScoreBoardProps) {
 
       {/* Team 1 Score */}
       <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500 border-2">
-        <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Team 1
+        <CardHeader className='-mb-4'>
+          <CardTitle className="text-white text-lg flex flex-row justify-between">
+            <div> 
+              <Users className="w-5 h-5 inline-block mr-2" />
+              Team 1
+            </div>
+
+            <div className="text-white">
+              {team1Players.map(player => (
+                <span key={player.id} className="text-sm ml-4">
+                  {player.nickname}
+                </span>
+              ))}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="text-white">
-          <div className="space-y-2">
-            {team1Players.map(player => (
-              <div key={player.id} className="text-sm">
-                {player.nickname}
-              </div>
-            ))}
-          </div>
           <div className="mt-4 pt-4 border-t border-blue-400">
             <div className="flex justify-between">
               <span>Courts:</span>
               <span className="font-bold text-xl">{gameState.team1Courts}</span>
             </div>
+            
             <div className="flex justify-between mt-2">
               <span>Deals Won:</span>
               <span className="font-bold">{gameState.team1DealsWon}</span>
@@ -53,25 +57,30 @@ export default function ScoreBoard({ gameState }: ScoreBoardProps) {
 
       {/* Team 2 Score */}
       <Card className="bg-gradient-to-br from-red-600 to-red-700 border-red-500 border-2">
-        <CardHeader>
-          <CardTitle className="text-white text-lg flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Team 2
+        <CardHeader className='-mb-4'>
+          <CardTitle className="text-white text-lg flex flex-row justify-between">
+            <div>
+              <Users className="w-5 h-5 inline-block mr-2" />
+              Team 2
+            </div>
+
+            <div className="text-white">
+              {team2Players.map(player => (
+                <span key={player.id} className="text-sm ml-4">
+                  {player.nickname}
+                </span>
+              ))}
+            </div>
           </CardTitle>
         </CardHeader>
+
         <CardContent className="text-white">
-          <div className="space-y-2">
-            {team2Players.map(player => (
-              <div key={player.id} className="text-sm">
-                {player.nickname}
-              </div>
-            ))}
-          </div>
           <div className="mt-4 pt-4 border-t border-red-400">
             <div className="flex justify-between">
               <span>Courts:</span>
               <span className="font-bold text-xl">{gameState.team2Courts}</span>
             </div>
+
             <div className="flex justify-between mt-2">
               <span>Deals Won:</span>
               <span className="font-bold">{gameState.team2DealsWon}</span>

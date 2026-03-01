@@ -26,7 +26,6 @@ export default function GameAlerts({
     autoStart: true,
   });
 
-  // 🔥 THIS IS THE FIX
   useEffect(() => {
     restart(expiryTime, true);
   }, [expiryTime, restart]);
@@ -37,7 +36,7 @@ export default function GameAlerts({
   const winner = gameState.players.find(p => p.id === gameState.prevTrickWinner);
 
   return (
-    <Card className={`mt-4 bg-gradient-to-r ${bgColor} border-2 border-white/20 animate-in fade-in slide-in-from-top-4`}>
+    <Card className={`mt-4 bg-gradient-to-r ${bgColor} border-2 border-white/20 animate-in fade-in slide-in-from-top-4 absolute z-50`}>
       <CardContent className="p-4 text-center text-white">
         {isComplete === 'trick-complete-without-winner' && (
           <div className="font-bold">Senior: {winner?.nickname}</div>

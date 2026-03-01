@@ -32,7 +32,7 @@ export default function RoomJoin() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold text-amber-400 mb-2 drop-shadow-lg">Court Piece Double Sir</h1>
-          <p className="text-xl text-amber-100 font-medium">Rung Game - updated trump selection</p>
+          <p className="text-xl text-amber-100 font-medium">Rung Game - updated UI</p>
           <div className="flex items-center justify-center gap-2 mt-4 text-amber-200">
             <Users className="w-5 h-5" />
             <span className="text-sm">4 Players Required</span>

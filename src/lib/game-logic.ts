@@ -146,7 +146,7 @@ export function playCard(state: GameState, playerId: string, card: Card): GameSt
     newTrick.winner = winnerId;
     
     // check if someone won
-    if (completedTricks > 2 && (newTrick.winner === state.prevTrickWinner || completedTricks === 13)) {
+    if (completedTricks > 2 && ((newTrick.winner === state.prevTrickWinner && newAccumalatedTricksAfterLastWinner.length > 1) || completedTricks === 13)) {
       // Update tricks won
       const playersWithTricks: Player[] = newPlayers.map((p, idx) => {
         if (idx === winnerIndex) {
