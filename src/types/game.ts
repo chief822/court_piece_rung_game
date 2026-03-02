@@ -12,8 +12,8 @@ export interface Card {
 export const SUIT_ORDER: Suit[] = [
   'spades',
   'hearts',
-  'diamonds',
   'clubs',
+  'diamonds',
 ];
 
 export const RANK_ORDER: Rank[] = [

@@ -57,6 +57,19 @@ function getCardPileTransform(card: { suit: Suit; rank: Rank }) {
   return deterministicRandom3(seed);
 }
 
+function getCasinoCircleTransform(
+  index: number,
+  total: number,
+  radius = 70
+) {
+  const angle = (index / total) * Math.PI * 2;
+  return {
+    x: Math.cos(angle) * radius,
+    y: Math.sin(angle) * radius,
+    rotate: (angle * 180) / Math.PI + 90
+  };
+}
+
 export default function GameTable({ gameState, myId, onPlayCard, onContinue }: GameTableProps) {
   const myPlayer = gameState.players.find(p => p.id === myId);
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
@@ -84,73 +97,87 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
       {/* Game Table / Center Pile */}
       <div className="flex-1 relative min-h-[350px]">
         <Card className="bg-gradient-to-br from-green-800 to-green-900 border-amber-700 border-4 h-full">
-          <CardContent className="p-8 h-full flex flex-col">
+          <CardContent className="p-0 h-full flex flex-col">
             <div className="relative flex-1">
-              {/* Center pile */}
-              <div ref={pileContainerRef} className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center">
+                {/* Outer felt ring */}
+                <div
+                  className="
+                    relative
+                    w-[320px] h-[320px]
+                    rounded-full
+                    bg-gradient-to-br from-green-700 to-green-900
+                    border-[6px] border-amber-700
+                    shadow-[inset_0_0_40px_rgba(0,0,0,0.6)]
+                  "
+                >
+                  {/* Inner betting ring */}
+                  <div
+                    className="
+                      absolute inset-[18px]
+                      rounded-full
+                      border-2 border-dashed border-amber-400/70
+                      pointer-events-none
+                    "
+                  />
+
+                  {/* Subtle glow */}
+                  <div
+                    className="
+                      absolute inset-0
+                      rounded-full
+                      shadow-[0_0_25px_rgba(255,200,100,0.35)]
+                      pointer-events-none
+                    "
+                  />
+
+                  <div
+                    className="
+                      absolute left-1/2 top-1/2
+                      -translate-x-1/2 -translate-y-1/2
+                      w-12 h-12 rounded-full
+                      bg-amber-500
+                      border-4 border-amber-700
+                      shadow-lg
+                      text-black font-bold
+                      flex items-center justify-center
+                    "
+                  >
+                    D
+                  </div>
+                  <div ref={pileContainerRef} className="absolute inset-0 flex items-center justify-center">
                   {gameState.accumalatedTricksAfterLastWinner
                     ?.flatMap(trick => trick.cards)
-                    .map((playedCard, index) => {
-                      const playerIndex = gameState.players.findIndex(
-                        p => p.id === playedCard.playerId
+                    .map((playedCard, index, arr) => {
+                      const { x, y, rotate } = getCasinoCircleTransform(
+                        index,
+                        arr.length
                       );
-
-                      const position = getPlayerPosition(playerIndex);
-                      const [offsetX, offsetY, rotation] = getCardPileTransform(playedCard.card);
-                      
-                      // according to test translate-x or -y doesnt work. framer motion is probably overriding it
-                      // but top, botttom, left, right are working so use them, havent checked if rotate
-
-                      // const positionStyles = {
-                      //   bottom: {
-                      //     bottom: `${offsetX}%`,
-                      //     left: `${offsetY}%`
-                      //   },
-                      //   top: {
-                      //     top: `${offsetX}%`,
-                      //     left: `${offsetY}%`
-                      //   },
-                      //   left: {
-                      //     left: `${offsetX}%`,
-                      //     top: `${offsetY}%`
-                      //   },
-                      //   right: {
-                      //     right: `${offsetX}%`,
-                      //     top: `${offsetY}%`
-                      //   }
-                      // };
-                      const container = pileContainerRef.current;
-                      const offsetXpx = (container?.offsetWidth || 1) * (offsetX / 100);
-                      const offsetYpx = (container?.offsetHeight || 1) * (offsetY / 100);
 
                       return (
                         <motion.div
                           key={playedCard.card.id}
                           layoutId={`card-${playedCard.card.id}`}
-                          style={{ 
-                            zIndex: 100,
-                            position: 'absolute',
-                            // ...positionStyles[position]
-                          }}
-                          initial={{ scale: 1.1 }}
-                          animate={{ 
-                            scale: 1,
-                            rotate: rotation,
-                            x: offsetXpx,
-                            y: offsetYpx
+                          style={{ position: 'absolute', zIndex: 100 }}
+                          initial={{ scale: 1 }}
+                          animate={{
+                            scale: 0.75,
+                            x,
+                            y,
+                            rotate
                           }}
                           transition={{
                             type: 'spring',
-                            stiffness: 180,   // 👈 much slower
-                            damping: 30,
-                            mass: 1.2,
-                            delay: playedCard.playerId === myId ? 0 : 0.2
+                            stiffness: 110,
+                            damping: 30
                           }}
                         >
                           <PlayingCard card={playedCard.card} size="md" />
                         </motion.div>
                       );
                     })}
+                  </div>
+                </div>
               </div>
 
               {/* Players Info */}
@@ -159,10 +186,10 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                 const isCurrent = gameState.currentPlayerIndex === index;
                 
                 const containerStyles = {
-                  bottom: 'bottom-4 left-1/2 -translate-x-1/2',
-                  top: 'top-4 left-1/2 -translate-x-1/2',
-                  left: 'left-4 top-1/2 -translate-y-1/2',
-                  right: 'right-4 top-1/2 -translate-y-1/2'
+                  bottom: 'bottom-1 left-1/2 -translate-x-1/2',
+                  top: 'top-1 left-1/2 -translate-x-1/2',
+                  left: 'left-1 top-1/2 -translate-y-1/2',
+                  right: 'right-1 top-1/2 -translate-y-1/2'
                 };
                 
                 return (

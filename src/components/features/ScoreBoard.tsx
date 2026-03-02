@@ -26,17 +26,19 @@ export default function ScoreBoard({ gameState }: ScoreBoardProps) {
       <Card className="bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500 border-2">
         <CardHeader className='-mb-4'>
           <CardTitle className="text-white text-lg flex flex-row justify-between">
-            <div> 
+            {/* <div> 
               <Users className="w-5 h-5 inline-block mr-2" />
               Team 1
-            </div>
+            </div> */}
 
             <div className="text-white">
-              {team1Players.map(player => (
+              {/* {team1Players.map(player => (
                 <span key={player.id} className="text-sm ml-4">
                   {player.nickname}
                 </span>
-              ))}
+              ))} */}
+
+              {team1Players[0].nickname} and {team1Players[1].nickname}
             </div>
           </CardTitle>
         </CardHeader>
@@ -59,17 +61,19 @@ export default function ScoreBoard({ gameState }: ScoreBoardProps) {
       <Card className="bg-gradient-to-br from-red-600 to-red-700 border-red-500 border-2">
         <CardHeader className='-mb-4'>
           <CardTitle className="text-white text-lg flex flex-row justify-between">
-            <div>
+            {/* <div>
               <Users className="w-5 h-5 inline-block mr-2" />
               Team 2
-            </div>
+            </div> */}
 
             <div className="text-white">
-              {team2Players.map(player => (
+              {/* {team2Players.map(player => (
                 <span key={player.id} className="text-sm ml-4">
                   {player.nickname}
                 </span>
-              ))}
+              ))} */}
+
+              {team2Players[0].nickname} and {team2Players[1].nickname}
             </div>
           </CardTitle>
         </CardHeader>
