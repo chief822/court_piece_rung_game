@@ -6,6 +6,20 @@ interface PlayingCardProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
+export function CardBack({ size = 'md', className }: { size?: 'sm' | 'md', className: string }) {
+  return (
+    <div
+      className={`
+        rounded-lg  ${className ?? ''}
+        ${size === 'md' ? 'w-[72px] h-[104px]' : 'w-[56px] h-[80px]'}
+        bg-gradient-to-br from-blue-800 to-blue-900
+        border-2 border-slate-300
+        shadow-lg
+      `}
+    />
+  );
+}
+
 export default function PlayingCard({ card, size = 'md' }: PlayingCardProps) {
   const sizeClasses = {
     sm: 'w-16 h-24 text-lg -mr-8',

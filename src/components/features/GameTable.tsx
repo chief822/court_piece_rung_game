@@ -1,7 +1,7 @@
 import { Card as CardType, GamePhase, GameState, SUIT_INDEX, RANK_INDEX, Suit, Rank } from '@/types/game';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import PlayingCard from './PlayingCard';
+import PlayingCard, { CardBack } from './PlayingCard';
 import { canPlayCard } from '@/lib/card-utils';
 import { getSuitSymbol } from '@/lib/card-utils';
 import { ArrowRight } from 'lucide-react';
@@ -102,36 +102,36 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
               <div className="absolute inset-0 flex items-center justify-center">
                 {/* Outer felt ring */}
                 <div
-                  className="
-                    relative
-                    w-[320px] h-[320px]
-                    rounded-full
-                    bg-gradient-to-br from-green-700 to-green-900
-                    border-[6px] border-amber-700
-                    shadow-[inset_0_0_40px_rgba(0,0,0,0.6)]
-                  "
+                  // className="
+                  //   relative
+                  //   w-[320px] h-[320px]
+                  //   rounded-full
+                  //   bg-gradient-to-br from-green-700 to-green-900
+                  //   border-[6px] border-amber-700
+                  //   shadow-[inset_0_0_40px_rgba(0,0,0,0.6)]
+                  // ""
                 >
                   {/* Inner betting ring */}
                   <div
-                    className="
-                      absolute inset-[18px]
-                      rounded-full
-                      border-2 border-dashed border-amber-400/70
-                      pointer-events-none
-                    "
+                    // className="
+                    //   absolute inset-[18px]
+                    //   rounded-full
+                    //   border-2 border-dashed border-amber-400/70
+                    //   pointer-events-none
+                    // "
                   />
 
                   {/* Subtle glow */}
                   <div
-                    className="
-                      absolute inset-0
-                      rounded-full
-                      shadow-[0_0_25px_rgba(255,200,100,0.35)]
-                      pointer-events-none
-                    "
+                    // className="
+                    //   absolute inset-0
+                    //   rounded-full
+                    //   shadow-[0_0_25px_rgba(255,200,100,0.35)]
+                    //   pointer-events-none
+                    // "
                   />
 
-                  <div
+                  {/* <div
                     className="
                       absolute left-1/2 top-1/2
                       -translate-x-1/2 -translate-y-1/2
@@ -144,7 +144,7 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                     "
                   >
                     D
-                  </div>
+                  </div> */}
                   <div ref={pileContainerRef} className="absolute inset-0 flex items-center justify-center">
                   {gameState.accumalatedTricksAfterLastWinner
                     ?.flatMap(trick => trick.cards)
@@ -159,7 +159,7 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                           key={playedCard.card.id}
                           layoutId={`card-${playedCard.card.id}`}
                           style={{ position: 'absolute', zIndex: 100 }}
-                          initial={{ scale: 1 }}
+                          initial = {{ scale: 0.75 }}
                           animate={{
                             scale: 0.75,
                             x,
@@ -225,16 +225,18 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                             <motion.div
                               key={cardInHand.id}
                               layoutId={`card-${cardInHand.id}`}
-                              initial={{ scale: 1.1 }}
                               animate={{ scale: 1, opacity: 0 }}
+                              initial={{ scale: 0.75 }}
+                              // animate={{ scale: 0.75 }}
                               transition={{
                                 type: 'tween',
                                 duration: 0,  // make it instant to avoid revealing private info
                                 ease: 'easeInOut'   // makes it smooth
                               }}
-                              style={{ position: 'absolute' }}
+                              className="absolute scale-75 origin-center"
                             >
                               <PlayingCard card={cardInHand} size="md" />
+                              {/* <CardBack size="md" className="scale-75 origin-center" /> */}
                             </motion.div>
                           );
                         })}
