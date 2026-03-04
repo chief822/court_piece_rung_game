@@ -159,7 +159,6 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                           key={playedCard.card.id}
                           layoutId={`card-${playedCard.card.id}`}
                           style={{ position: 'absolute', zIndex: 100 }}
-                          initial = {{ scale: 0.75 }}
                           animate={{
                             scale: 0.75,
                             x,
@@ -207,8 +206,7 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                             <motion.div
                               key={wonCard.id}
                               layoutId={`card-${wonCard.id}`}
-                              initial={{ scale: 1.1 }}
-                              animate={{ scale: 1, opacity: 0 }}
+                              animate={{ scale: 0.75, opacity: 0 }}
                               transition={{
                                 type: 'tween',
                                 duration: 1.5,
@@ -220,23 +218,20 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                             </motion.div>
                           );
                         })}
-                        {player.cards.map((cardInHand) => {
+                        {player.id !== myId && player.cards.map((cardInHand) => { // this is source of non player card throw from stack
                           return (
                             <motion.div
                               key={cardInHand.id}
                               layoutId={`card-${cardInHand.id}`}
-                              animate={{ scale: 1, opacity: 0 }}
-                              initial={{ scale: 0.75 }}
-                              // animate={{ scale: 0.75 }}
+                              animate={{ scale: 0.75 }}
                               transition={{
-                                type: 'tween',
-                                duration: 0,  // make it instant to avoid revealing private info
-                                ease: 'easeInOut'   // makes it smooth
+                                type: "tween",
+                                duration: 0.4,
+                                ease: [0.4, 0, 0.2, 1]  // easeOutExpo-like
                               }}
-                              className="absolute scale-75 origin-center"
+                              className={`absolute ${position === 'top' ? 'top-0 -right-3/4' : ''}`}
                             >
-                              <PlayingCard card={cardInHand} size="md" />
-                              {/* <CardBack size="md" className="scale-75 origin-center" /> */}
+                              <CardBack size="md" className="origin-center" />
                             </motion.div>
                           );
                         })}

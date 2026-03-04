@@ -11,7 +11,7 @@ export function CardBack({ size = 'md', className }: { size?: 'sm' | 'md', class
     <div
       className={`
         rounded-lg  ${className ?? ''}
-        ${size === 'md' ? 'w-[72px] h-[104px]' : 'w-[56px] h-[80px]'}
+        ${size === 'md' ? 'w-20 h-28' : 'w-16 h-24'}
         bg-gradient-to-br from-blue-800 to-blue-900
         border-2 border-slate-300
         shadow-lg
