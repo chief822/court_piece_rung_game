@@ -75,6 +75,8 @@ export interface GameState {
   team2Score: number; // players 1 & 3
   team1DealsWon: number;
   team2DealsWon: number;
+  team1RungRakha: number;
+  team2RungRakha: number;
   team1Courts: number;
   team2Courts: number;
   consecutiveDealsWinner: 1 | 2 | null;

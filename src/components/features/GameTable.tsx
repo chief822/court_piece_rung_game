@@ -63,11 +63,12 @@ function getCasinoCircleTransform(
   radius = 70
 ) {
   const angle = (index / total) * Math.PI * 2;
-  return {
-    x: Math.cos(angle) * radius,
-    y: Math.sin(angle) * radius,
-    rotate: (angle * 180) / Math.PI + 90
-  };
+  // return {
+  //   x: Math.cos(angle) * radius,
+  //   y: Math.sin(angle) * radius,
+  //   rotate: (angle * 180) / Math.PI + 90
+  // };
+  return ((angle * 180) / Math.PI + 90) % 720;
 }
 
 export default function GameTable({ gameState, myId, onPlayCard, onContinue }: GameTableProps) {
@@ -149,20 +150,26 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                   {gameState.accumalatedTricksAfterLastWinner
                     ?.flatMap(trick => trick.cards)
                     .map((playedCard, index, arr) => {
-                      const { x, y, rotate } = getCasinoCircleTransform(
-                        index,
-                        arr.length
-                      );
+                      // const { x, y, rotate } = getCasinoCircleTransform(
+                      //   index,
+                      //   arr.length
+                      // );
+                      const rotate = getCasinoCircleTransform(index, 7);
 
                       return (
                         <motion.div
                           key={playedCard.card.id}
                           layoutId={`card-${playedCard.card.id}`}
-                          style={{ position: 'absolute', zIndex: 100 }}
+                          // Add the matching width and height here so the wrapper's center matches the card's visual center
+                          className="w-20 h-28" 
+                          style={{
+                            position: 'absolute',
+                            zIndex: 100,
+                          }}
                           animate={{
-                            scale: 0.75,
-                            x,
-                            y,
+                            scale: 1,
+                            // x,
+                            // y,
                             rotate
                           }}
                           transition={{

@@ -44,14 +44,14 @@ export default function ScoreBoard({ gameState }: ScoreBoardProps) {
         </CardHeader>
         <CardContent className="text-white">
           <div className="mt-4 pt-4 border-t border-blue-400">
-            <div className="flex justify-between">
-              <span>Courts:</span>
-              <span className="font-bold text-xl">{gameState.team1Courts}</span>
-            </div>
-            
             <div className="flex justify-between mt-2">
               <span>Deals Won:</span>
               <span className="font-bold">{gameState.team1DealsWon}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Rung Rakha:</span>
+              <span className="font-bold">{gameState.team1RungRakha}</span>
             </div>
           </div>
         </CardContent>
@@ -80,21 +80,21 @@ export default function ScoreBoard({ gameState }: ScoreBoardProps) {
 
         <CardContent className="text-white">
           <div className="mt-4 pt-4 border-t border-red-400">
-            <div className="flex justify-between">
-              <span>Courts:</span>
-              <span className="font-bold text-xl">{gameState.team2Courts}</span>
-            </div>
-
             <div className="flex justify-between mt-2">
               <span>Deals Won:</span>
               <span className="font-bold">{gameState.team2DealsWon}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span>Rung Rakha:</span>
+              <span className="font-bold">{gameState.team2RungRakha}</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Consecutive Deals Tracker */}
-      {gameState.consecutiveDealsWinner && (
+      {/* {gameState.consecutiveDealsWinner && (
         <Card className="bg-gradient-to-br from-purple-600 to-purple-700 border-purple-500 border-2">
           <CardContent className="p-4 text-white text-center">
             <div className="text-sm mb-1">Consecutive Deals</div>
@@ -106,7 +106,7 @@ export default function ScoreBoard({ gameState }: ScoreBoardProps) {
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
     </div>
   );
 }

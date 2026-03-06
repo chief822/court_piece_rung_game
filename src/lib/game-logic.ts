@@ -46,6 +46,8 @@ export function createInitialGameState(players: Array<{ id: string; nickname: st
     team2Score: 0,
     team1DealsWon: 0,
     team2DealsWon: 0,
+    team1RungRakha: 0,
+    team2RungRakha: 0,
     team1Courts: 0,
     team2Courts: 0,
     consecutiveDealsWinner: null,
@@ -95,13 +97,13 @@ export function selectTrump(state: GameState, suit: Suit): GameState {
 }
 
 // returns team number if anyone won yet otherwise null
-function getWinnerTeam(state: GameState): number | null {
+function getWinnerTeam(state: GameState): 1 | 2 | null {
   const team1Tricks = state.players[0].tricksWon + state.players[2].tricksWon;
   const team2Tricks = state.players[1].tricksWon + state.players[3].tricksWon;
-  if (team1Tricks >= 7) {
+  if (team1Tricks === 13 || (team1Tricks >= 7 && team2Tricks >= 1)) {
     return 1;
   }
-  else if (team2Tricks >= 7) {
+  else if (team2Tricks === 13 || (team2Tricks >= 7 && team1Tricks >= 1)) {
     return 2;
   }
   return null;
@@ -235,7 +237,10 @@ function completeRound(state: GameState): GameState {
   let newState = { ...state };
   let team1DealsWon = state.team1DealsWon;
   let team2DealsWon = state.team2DealsWon;
+  let team1RungRakha = state.team1RungRakha;
+  let team2RungRakha = state.team2RungRakha;
   let dealerIndex: number = -1;
+  const prevTrumpCaller = (state.dealerIndex + 1) % 4;
 
   const dealWinner = getWinnerTeam(state);
   if (dealWinner === null) {
@@ -245,10 +250,16 @@ function completeRound(state: GameState): GameState {
   }
   if (dealWinner === 1) {
     team1DealsWon++;
+    if ((state.players[0].tricksWon + state.players[2].tricksWon === 13) && [1, 3].includes(prevTrumpCaller)) {
+      team2RungRakha++;
+    }
     dealerIndex = pickOne(1, 3);
   }
   else {
     team2DealsWon++;
+    if ((state.players[1].tricksWon + state.players[3].tricksWon === 13) && [0, 2].includes(prevTrumpCaller)) {
+      team1RungRakha++;
+    }
     dealerIndex = pickOne(0, 2);
   }
 
@@ -256,6 +267,8 @@ function completeRound(state: GameState): GameState {
     ...newState,
     team1DealsWon,
     team2DealsWon,
+    team1RungRakha,
+    team2RungRakha,
     dealerIndex,
     roundNumber: state.roundNumber + 1
   };
