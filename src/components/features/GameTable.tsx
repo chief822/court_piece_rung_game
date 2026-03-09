@@ -44,11 +44,11 @@ function deterministicRandom3(
     return x / m; // [0, 1)
   }
 
-  const r1 = next01() * 50;    // [0, 50)
-  const r2 = next01() * 50;    // [0, 50)
+  const r1 = next01() * 100;    // [0, 100)
+  const r2 = next01() * 100;    // [0, 100)
   const angle = next01() * 360; // [0, 360)
 
-  return [-25 + r1, -25 + r2, angle];
+  return [-50 + r1, -50 + r2, angle];
 }
 
 function getCardPileTransform(card: { suit: Suit; rank: Rank }) {
@@ -154,7 +154,9 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                       //   index,
                       //   arr.length
                       // );
-                      const rotate = getCasinoCircleTransform(index, 7);
+                      // const rotate = getCasinoCircleTransform(index, 7);
+                      const card = playedCard.card;
+                      const [ x, y, rotate ] = getCardPileTransform(card);
 
                       return (
                         <motion.div
@@ -167,9 +169,9 @@ export default function GameTable({ gameState, myId, onPlayCard, onContinue }: G
                             zIndex: 100,
                           }}
                           animate={{
-                            scale: 1,
-                            // x,
-                            // y,
+                            scale: 0.75,
+                            x,
+                            y,
                             rotate
                           }}
                           transition={{

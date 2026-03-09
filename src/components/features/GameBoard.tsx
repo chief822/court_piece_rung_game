@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Card as UICard, CardContent } from '@/components/ui/card';
+import PlayingCard from '@/components/features/PlayingCard';
 import type { GameState, Card, Suit, NetworkMessage, ChatMessage } from '@/types/game';
 import type { RoomState } from '@/types/game';
 import type { WebRTCManager } from '@/lib/webrtc-manager';
@@ -10,6 +11,7 @@ import GameAlerts from './GameAlerts';
 import TrumpSelection from './TrumpSelection';
 import ScoreBoard from './ScoreBoard';
 import ChatPanel from './ChatPanel';
+import { motion } from 'framer-motion';
 
 interface GameBoardProps {
   roomState: RoomState;
@@ -239,6 +241,14 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
   const myPlayer = gameState.players.find(p => p.id === myId);
   const isTrumpCaller = gameState.trumpCallerId === myId;
 
+  const trumpCard: Card | null = gameState.trumpSuit
+  ? {
+      suit: gameState.trumpSuit,
+      rank: '',
+      id: '1',
+    }
+  : null;
+
   return (
     <div className="bg-gradient-to-br from-emerald-900 via-green-900 to-teal-900 pt-2">
       <div className="max-w-7xl mx-auto">
@@ -249,15 +259,16 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
               {/* Trump Suit Indicator */}
               <UICard className="bg-gradient-to-r from-purple-600 to-purple-700 border-purple-500 border-2">
                 <CardContent className="p-4">
-                  <div className="text-center text-white">
-                    {gameState.trumpSuit && (<>
-                      <span className="text-lg font-medium mr-2">Trump Suit:</span>
-                        <span className="text-3xl">{getSuitSymbol(gameState.trumpSuit)}</span>
-                        <span className="text-lg font-bold ml-2 capitalize">{gameState.trumpSuit}</span>
+                  <div className="text-white flex items-center justify-between">
+                    {trumpCard && (<>
+                        <span className="text-lg font-medium mr-2">Rung:</span>
+                        <div className='inline-block w-16'>
+                          <PlayingCard card={trumpCard} size="sm" />
+                        </div>
                       </>
                     )}
-                    {!gameState.trumpSuit && (
-                      <p className="text-white/80">Waiting for trump to be called…</p>
+                    {!trumpCard && (
+                      <p className="text-white/80">Waiting for Rung to be called…</p>
                     )}
                   </div>
                 </CardContent>
@@ -287,13 +298,13 @@ export default function GameBoard({ roomState, myId, webrtc }: GameBoardProps) {
               <div className="flex items-center justify-center h-full">
                 <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl px-8 py-6 shadow-xl text-center">
                   <div className="text-lg font-semibold text-emerald-300 mb-2">
-                    Trump Selection
+                    Rung Selection
                   </div>
 
                   <div className="flex items-center justify-center gap-3">
                     <span className="inline-block h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
                     <p className="text-white/80">
-                      Waiting for trump to be called…
+                      Waiting for Rung to be called…
                     </p>
                   </div>
                 </div>

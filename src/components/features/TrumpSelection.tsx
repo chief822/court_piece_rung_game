@@ -18,17 +18,24 @@ export default function TrumpSelection({ firstFiveCards, onSelectTrump }: TrumpS
     return acc;
   }, {} as Record<Suit, number>);
 
+  const mapUrdu = {
+    hearts: 'paan',
+    spades: 'hokm',
+    diamonds: 'eent',
+    clubs: 'chiri'
+  };
+
   return (
     <div className="space-y-6">
       <Card className="bg-gradient-to-br from-amber-600 to-amber-700 border-amber-500 border-2">
         <CardHeader>
           <CardTitle className="text-white text-2xl text-center">
-            You are the Trump Caller!
+            You are the Rung!
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-amber-100 text-center mb-4">
-            Select the trump suit from your first 5 cards
+            Select the Rung suit from your first 5 cards
           </p>
           
           {/* First 5 Cards */}
@@ -56,7 +63,7 @@ export default function TrumpSelection({ firstFiveCards, onSelectTrump }: TrumpS
               >
                 <span className="text-4xl mr-2">{getSuitSymbol(suit)}</span>
                 <div className="text-left">
-                  <div className="capitalize">{suit}</div>
+                  <div className="capitalize">{suit} - {mapUrdu[suit]}</div>
                   <div className="text-sm opacity-80">({suitCounts[suit]} cards)</div>
                 </div>
               </Button>
